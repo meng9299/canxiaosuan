@@ -1,0 +1,1310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>餐小算 · 菜品管理</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  /* ── 字体缩放变量 (小/中/大) ── */
+  --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+  --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+  --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px; --fs-26:26px;
+  --fs-28:28px; --fs-30:30px; --fs-36:36px;
+
+  --brand:#534AB7; --brand-light:#EEEDFE; --brand-mid:#7F77DD;
+  --bg:#f5f5f3; --white:#fff; --text:#1a1a1a; --text-s:#555; --text-m:#777;
+  --border:rgba(0,0,0,0.08); --radius:12px;
+  --red:#e74c3c; --green:#27ae60; --orange:#f39c12;
+}
+ body {font-weight:600;font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); max-width:420px; margin:0 auto; padding-bottom:72px; }
+
+/* ── 顶栏 ── */
+.topbar { display:flex; align-items:center; padding:14px 16px 10px; background:var(--white); position:sticky; top:0; z-index:20; border-bottom:1px solid var(--border); gap:10px; }
+.tb-title { font-size:var(--fs-16); font-weight:700; flex:1; }
+.role-tag { display:flex; align-items:center; gap:4px; font-size:var(--fs-14); font-weight:600; cursor:pointer; padding:4px 10px; border-radius:16px; border:1px solid var(--border); background:var(--bg); color:var(--text-s); white-space:nowrap; }
+.role-tag.waiter { background:#fce4ec; color:#c62828; border-color:#f8bbd0; }
+.role-tag.boss { background:#fff3e0; color:#e65100; border-color:#ffe0b2; }
+.role-tag.manager { background:#e3f2fd; color:#1565c0; border-color:#bbdefb; }
+.tb-notif { font-size:var(--fs-20); cursor:pointer; position:relative; }
+.tb-notif sup { font-size:var(--fs-14); background:#e74c3c; color:#fff; padding:1px 5px; border-radius:8px; position:relative; top:-6px; }
+
+/* ── 桌台选择区 ── */
+.table-section { padding:12px 16px 6px; }
+.ts-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.ts-title { font-size:var(--fs-15); font-weight:600; }
+.ts-add { font-size:var(--fs-14); color:var(--brand); cursor:pointer; }
+.table-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.table-btn { border:none; border-radius:10px; padding:10px 4px 8px; cursor:pointer; font-family:inherit; font-size:var(--fs-15); font-weight:600; text-align:center; transition:all .18s; position:relative; }
+.table-btn .tb-num { font-size:var(--fs-16); font-weight:700; display:block; }
+.table-btn.empty { background:var(--white); color:var(--text-s); border:1.5px dashed var(--border); }
+.table-btn.open { background:#fff8e1; color:#e65100; border:1.5px solid #ffe0b2; }
+.table-btn.open .tb-num { color:#e65100; }
+.table-btn.active { background:var(--brand); color:#fff; transform:scale(1.04); box-shadow:0 3px 10px rgba(83,74,183,.35); }
+.table-btn.active .tb-num { color:#fff; }
+.table-btn .tb-badge { position:absolute; top:4px; right:4px; background:var(--red); color:#fff; font-size:var(--fs-9); padding:1px 4px; border-radius:6px; font-weight:700; }
+.table-btn .tb-amt { font-size:var(--fs-14); color:inherit; opacity:.8; }
+.table-btn .tb-dur { font-size:var(--fs-9); color:inherit; opacity:.6; display:block; }
+
+/* ── 菜单区 ── */
+.menu-section { padding:0 0 0; }
+.menu-search-bar { padding:6px 16px; background:var(--white); position:sticky; top:54px; z-index:15; }
+.menu-search-bar input { width:100%; padding:7px 12px 7px 32px; border:1.5px solid var(--border); border-radius:20px; font-size:var(--fs-15); font-family:inherit; background:#fafafa url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") 10px center no-repeat; }
+.menu-cat-bar { display:flex; overflow-x:auto; padding:8px 16px 4px; gap:8px; background:var(--white); border-bottom:1px solid var(--border); position:sticky; top:54px; z-index:15; scrollbar-width:none; }
+.menu-cat-bar.with-search { top:90px; }
+.menu-cat-bar::-webkit-scrollbar { display:none; }
+.cat-chip { padding:5px 12px; border-radius:14px; font-size:var(--fs-14); font-weight:600; cursor:pointer; border:1.5px solid var(--border); background:var(--white); color:var(--text-s); white-space:nowrap; transition:all .15s; flex-shrink:0; }
+.cat-chip.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+
+.menu-list { padding:8px 16px; }
+.menu-item { display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--white); border-radius:var(--radius); margin-bottom:8px; }
+.mi-icon { font-size:var(--fs-28); flex-shrink:0; }
+.mi-info { flex:1; min-width:0; }
+.mi-name { font-size:var(--fs-14); font-weight:600; }
+.mi-cost { font-size:var(--fs-15); color:var(--text-m); margin-top:1px; }
+.mi-price { font-size:var(--fs-16); font-weight:700; color:var(--brand); flex-shrink:0; }
+.mi-ctrl { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.mi-btn { width:28px; height:28px; border-radius:50%; border:none; font-size:var(--fs-18); cursor:pointer; font-family:inherit; font-weight:700; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.mi-btn.minus { background:#fde8e8; color:var(--red); }
+.mi-btn.plus { background:var(--brand); color:#fff; }
+.mi-btn:disabled { opacity:.3; }
+.mi-qty { min-width:22px; text-align:center; font-size:var(--fs-15); font-weight:700; color:var(--brand); }
+.mi-note { font-size:var(--fs-15); color:var(--brand-mid); cursor:pointer; padding:2px 6px; border:1px dashed var(--brand-mid); border-radius:10px; }
+.mi-note.has { background:var(--brand-light); border-style:solid; font-weight:600; }
+/* ── 备注弹窗 ── */
+.note-popup { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px; background:var(--white); border-radius:18px 18px 0 0; z-index:50; padding:16px 18px 20px; box-shadow:0 -4px 20px rgba(0,0,0,.15); }
+.note-popup .np-title { font-size:var(--fs-15); font-weight:700; margin-bottom:10px; }
+.note-popup .np-input { width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:var(--fs-14); font-family:inherit; margin-bottom:10px; }
+.note-popup .np-quick { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px; }
+.note-popup .np-quick span { padding:4px 10px; border-radius:14px; font-size:var(--fs-14); cursor:pointer; border:1.5px solid var(--border); background:var(--bg); color:var(--text-s); }
+.note-popup .np-quick span:active { background:var(--brand); color:#fff; border-color:var(--brand); }
+.note-popup .np-btns { display:flex; gap:8px; }
+.note-popup .np-btns button { flex:1; padding:10px; border-radius:12px; border:none; font-size:var(--fs-14); font-weight:600; cursor:pointer; font-family:inherit; }
+.note-popup .np-btns .btn-ok { background:var(--brand); color:#fff; }
+.note-popup .np-btns .btn-cancel { background:var(--bg); color:var(--text-s); }
+.note-mask { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:49; }
+/* ── 表注标记 ── */
+.mi-note-tag { font-size:var(--fs-14); color:var(--brand-mid); background:var(--brand-light); padding:1px 6px; border-radius:8px; margin-left:4px; }
+
+.no-menu { text-align:center; padding:40px 20px; color:var(--text-m); line-height:2; }
+.no-menu .nm-icon { font-size:48px; }
+
+/* ── 套餐模式 ── */
+.tc-mode-bar { display:flex; background:var(--white); padding:4px 16px 0; gap:6px; border-bottom:1px solid var(--border); }
+.tc-mode-tab { padding:10px 16px; font-size:var(--fs-14); font-weight:600; cursor:pointer; color:var(--text-s); border-bottom:2px solid transparent; white-space:nowrap; }
+.tc-mode-tab.active { color:var(--brand); border-bottom-color:var(--brand); font-weight:600; }
+
+.tc-card { background:var(--white); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
+.tc-head { display:flex; align-items:center; padding:12px 14px; gap:10px; }
+.tc-head:active { background:#fafafa; }
+.tc-icon { font-size:var(--fs-28); flex-shrink:0; }
+.tc-info { flex:1; min-width:0; }
+.tc-name { font-size:var(--fs-15); font-weight:600; }
+.tc-meta { font-size:var(--fs-14); color:var(--text-m); margin-top:2px; }
+.tc-price { font-size:var(--fs-16); font-weight:700; color:var(--brand); flex-shrink:0; }
+.tc-add-btn { width:32px; height:32px; border-radius:50%; background:var(--brand); color:#fff; border:none; font-size:var(--fs-20); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+.tc-comp-list { padding:0 14px 10px; display:none; }
+.tc-comp-list.show { display:block; }
+.tc-comp-item { display:flex; align-items:center; padding:6px 0; font-size:var(--fs-15); border-bottom:1px solid var(--border); gap:8px; }
+.tc-comp-item:last-child { border-bottom:none; }
+.tc-comp-icon { font-size:var(--fs-16); }
+.tc-comp-name { flex:1; }
+.tc-comp-type { font-size:var(--fs-15); padding:1px 6px; border-radius:6px; }
+.tc-comp-type.must { background:#fff3e0; color:#e65100; }
+.tc-comp-type.optional { background:#e8f5e9; color:#2e7d32; }
+
+/* ── 订单侧边抽屉（底部弹出） ── */
+.order-bar { position:fixed; bottom:72px; left:50%; transform:translateX(-50%); width:100%; max-width:420px; background:var(--brand); color:#fff; padding:12px 18px; display:flex; align-items:center; cursor:pointer; z-index:18; border-radius:12px 12px 0 0; transition:all .2s; }
+.ob-cart { font-size:var(--fs-22); position:relative; margin-right:12px; }
+.ob-badge { position:absolute; top:-4px; right:-4px; background:#ff5252; color:#fff; font-size:var(--fs-9); padding:1px 4px; border-radius:6px; font-weight:700; }
+.ob-info { flex:1; }
+.ob-count { font-size:var(--fs-15); font-weight:600; }
+.ob-total { font-size:var(--fs-18); font-weight:700; }
+.ob-btn { background:rgba(255,255,255,.22); padding:8px 16px; border-radius:20px; font-size:var(--fs-15); font-weight:600; }
+.ob-btn:hover { background:rgba(255,255,255,.35); }
+
+/* ── 订单抽屉弹窗 ── */
+.drawer-mask { position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:30; display:none; }
+.drawer-mask.show { display:block; }
+.drawer { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px; background:var(--white); border-radius:18px 18px 0 0; z-index:31; max-height:88vh; display:flex; flex-direction:column; transition:transform .25s; }
+.drawer-handle { width:36px; height:4px; background:var(--border); border-radius:2px; margin:10px auto 6px; flex-shrink:0; }
+.drawer-title { padding:0 18px 12px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; border-bottom:1px solid var(--border); }
+.drawer-title .dt-name { font-size:var(--fs-16); font-weight:700; }
+.drawer-title .dt-close { font-size:var(--fs-22); cursor:pointer; color:var(--text-m); }
+.drawer-body { overflow-y:auto; flex:1; padding:10px 0; }
+.order-item { display:flex; align-items:center; gap:10px; padding:8px 18px; }
+.oi-name { flex:1; font-size:var(--fs-14); font-weight:600; }
+.oi-price { font-size:var(--fs-15); color:var(--text-s); }
+.oi-ctrl { display:flex; align-items:center; gap:8px; }
+.oi-btn { width:26px; height:26px; border-radius:50%; border:none; font-size:var(--fs-16); cursor:pointer; font-family:inherit; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.oi-btn.minus { background:#fde8e8; color:var(--red); }
+.oi-btn.plus { background:var(--brand); color:#fff; }
+.oi-qty { min-width:22px; text-align:center; font-size:var(--fs-14); font-weight:700; }
+.oi-sub { font-size:var(--fs-15); font-weight:600; color:var(--brand); min-width:52px; text-align:right; }
+.order-empty { text-align:center; padding:30px 0; color:var(--text-m); font-size:var(--fs-15); }
+.drawer-footer { padding:12px 18px; border-top:1px solid var(--border); flex-shrink:0; }
+.df-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:var(--fs-15); }
+.df-row .label { color:var(--text-s); }
+.df-row .val { font-weight:600; }
+.df-row.big .val { font-size:var(--fs-20); font-weight:700; color:var(--brand); }
+.discount-row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.discount-row input { width:70px; padding:5px 8px; border:1px solid var(--border); border-radius:8px; font-size:var(--fs-15); font-family:inherit; text-align:center; }
+.discount-row .dr-label { font-size:var(--fs-14); color:var(--text-s); }
+.checkout-btn { width:100%; padding:14px; background:var(--brand); color:#fff; border:none; border-radius:14px; font-size:var(--fs-16); font-weight:700; cursor:pointer; font-family:inherit; }
+.checkout-btn:disabled { opacity:.4; }
+.clear-order-btn { background:none; border:none; color:var(--red); font-size:var(--fs-14); cursor:pointer; font-family:inherit; padding:0; }
+.confirm-order-btn { width:100%; padding:13px; background:#4caf50; color:#fff; border:none; border-radius:14px 14px 0 0; font-size:var(--fs-15); font-weight:700; cursor:pointer; font-family:inherit; margin:-1px -1px 0; }
+
+/* ── 结账弹窗 ── */
+.modal-mask { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:40; display:none; align-items:center; justify-content:center; }
+.modal-mask.show { display:flex; }
+.modal-box { background:var(--white); border-radius:18px; width:88%; max-width:360px; overflow:hidden; }
+.modal-head { background:var(--brand); color:#fff; padding:18px 20px 14px; }
+.modal-head .mh-title { font-size:17px; font-weight:700; }
+.modal-head .mh-sub { font-size:var(--fs-15); opacity:.85; margin-top:2px; }
+.modal-body { padding:18px 20px; }
+.mb-total { text-align:center; margin-bottom:16px; }
+.mb-total .mbt-label { font-size:var(--fs-14); color:var(--text-m); }
+.mb-total .mbt-amt { font-size:var(--fs-36); font-weight:700; color:var(--brand); }
+.pay-methods { display:flex; gap:10px; margin-bottom:16px; }
+.pay-method { flex:1; padding:12px 8px; border:2px solid var(--border); border-radius:12px; text-align:center; cursor:pointer; transition:all .15s; }
+.pay-method .pm-icon { font-size:var(--fs-22); }
+.pay-method .pm-name { font-size:var(--fs-14); font-weight:600; margin-top:4px; color:var(--text-s); }
+.pay-method.selected { border-color:var(--brand); background:var(--brand-light); }
+.pay-method.selected .pm-name { color:var(--brand); }
+.received-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.received-row label { font-size:var(--fs-15); color:var(--text-s); white-space:nowrap; }
+.received-row input { flex:1; padding:8px 10px; border:1px solid var(--border); border-radius:8px; font-size:var(--fs-15); font-family:inherit; text-align:right; }
+.change-row { text-align:right; font-size:var(--fs-15); color:var(--text-s); min-height:18px; }
+.change-row .change-val { color:var(--green); font-weight:600; }
+.modal-footer { display:flex; border-top:1px solid var(--border); }
+.modal-footer button { flex:1; padding:14px; border:none; font-size:var(--fs-15); font-weight:600; cursor:pointer; font-family:inherit; }
+.modal-footer .cancel { background:#f5f5f3; color:var(--text-s); }
+.modal-footer .confirm { background:var(--brand); color:#fff; }
+
+/* ── 小票弹窗 ── */
+.receipt-modal .modal-box { max-width:340px; }
+.receipt { padding:0 20px 20px; font-size:var(--fs-15); }
+.receipt .r-head { text-align:center; padding:16px 0 12px; border-bottom:1px dashed var(--border); margin-bottom:10px; }
+.receipt .r-head .rh-shop { font-size:var(--fs-16); font-weight:700; }
+.receipt .r-head .rh-meta { font-size:var(--fs-15); color:var(--text-m); margin-top:4px; }
+.receipt .r-item { display:flex; justify-content:space-between; padding:3px 0; }
+.receipt .r-item .ri-name { flex:1; }
+.receipt .r-item .ri-qty { color:var(--text-s); width:40px; text-align:center; }
+.receipt .r-item .ri-sub { width:60px; text-align:right; font-weight:600; }
+.receipt .r-divider { border:none; border-top:1px dashed var(--border); margin:8px 0; }
+.receipt .r-total { display:flex; justify-content:space-between; font-weight:700; font-size:var(--fs-15); padding:4px 0; }
+.receipt .r-pay { font-size:var(--fs-14); color:var(--text-s); text-align:right; margin-top:4px; }
+.receipt .r-thanks { text-align:center; font-size:var(--fs-14); color:var(--text-m); margin-top:12px; }
+.receipt-btns { display:flex; border-top:1px solid var(--border); }
+.receipt-btns button { flex:1; padding:13px; border:none; font-size:var(--fs-14); font-weight:600; cursor:pointer; font-family:inherit; }
+.receipt-btns .btn-close-r { background:#f5f5f3; color:var(--text-s); }
+.receipt-btns .btn-save-r { background:var(--brand); color:#fff; }
+
+/* ── 历史桌台记录 ── */
+.history-section { padding:10px 16px; }
+.hs-title { font-size:var(--fs-15); font-weight:600; color:var(--text-s); margin-bottom:8px; }
+.hist-item { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--white); border-radius:10px; margin-bottom:7px; }
+.hi-meta { flex:1; }
+.hi-table { font-size:var(--fs-15); font-weight:600; }
+.hi-time { font-size:var(--fs-15); color:var(--text-m); margin-top:1px; }
+.hi-amt { font-size:var(--fs-16); font-weight:700; color:var(--green); }
+.hi-pay { font-size:var(--fs-15); color:var(--text-m); }
+
+/* ── 角色切换弹窗 ── */
+.role-modal { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:50; display:none; align-items:center; justify-content:center; }
+.role-modal.show { display:flex; }
+.role-box { background:var(--white); border-radius:18px; width:84%; max-width:340px; padding:22px 20px; }
+.rb-title { font-size:var(--fs-16); font-weight:700; margin-bottom:16px; }
+.role-option { display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:12px; cursor:pointer; margin-bottom:8px; border:2px solid var(--border); transition:all .15s; }
+.role-option.selected { border-color:var(--brand); background:var(--brand-light); }
+.role-option .ro-icon { font-size:var(--fs-24); }
+.role-option .ro-name { font-size:var(--fs-14); font-weight:600; }
+.role-option .ro-desc { font-size:var(--fs-15); color:var(--text-m); margin-top:2px; }
+.rb-cancel { width:100%; padding:11px; background:var(--bg); border:none; border-radius:12px; font-size:var(--fs-14); cursor:pointer; font-family:inherit; margin-top:4px; }
+
+/* ── 底部导航 ── */
+.bottom-nav { position:fixed; bottom:0; left:50%; -webkit-transform:translateX(-50%); transform:translateX(-50%); width:100%; max-width:420px; background:var(--white); border-top:1px solid var(--border); display:flex; padding-bottom: env(safe-area-inset-bottom, 4px); z-index: 50; }
+.nav-item {font-weight:600; flex:1; text-align:center; padding:8px 0 6px; font-size:var(--fs-15); color:var(--text-m); cursor:pointer; text-decoration:none; }
+.nav-item.active { color:var(--brand); font-weight:600; }
+.nav-item .n-icon { font-size:var(--fs-20); display:block; margin-bottom:2px; }
+
+/* ── 桌台管理抽屉 ── */
+.table-mgr { padding:10px 18px 18px; }
+.tm-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.tm-row label { font-size:var(--fs-15); color:var(--text-s); white-space:nowrap; }
+.tm-row input { flex:1; padding:7px 10px; border:1px solid var(--border); border-radius:8px; font-size:var(--fs-14); font-family:inherit; }
+.tm-btn { padding:8px 18px; background:var(--brand); color:#fff; border:none; border-radius:20px; font-size:var(--fs-15); cursor:pointer; font-family:inherit; }
+.table-list { margin-top:12px; }
+.tl-item { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:var(--fs-15); }
+.tl-name { flex:1; font-weight:600; }
+.tl-del { color:var(--red); background:none; border:none; font-size:var(--fs-18); cursor:pointer; padding:0 4px; }
+.tl-edit { color:var(--text-m); background:none; border:none; font-size:var(--fs-16); cursor:pointer; padding:0 2px; }
+.tl-edit:active { color:var(--brand); }
+.tl-inline-input { flex:1; padding:5px 8px; border:1.5px solid var(--brand); border-radius:6px; font-size:var(--fs-14); font-family:inherit; background:#fff; outline:none; }
+
+/* ── Toast ── */
+.toast { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:rgba(0,0,0,.75); color:#fff; padding:10px 22px; border-radius:22px; font-size:var(--fs-14); z-index:99; opacity:0; pointer-events:none; transition:opacity .25s; }
+.toast.show { opacity:1; }
+</style>
+
+<script>
+/* ═══ 字体缩放 小/中/大 ═══ */
+(function(){
+  var KEY = 'sxs_font_size';
+  var cur = localStorage.getItem(KEY) || 'small';
+  document.documentElement.setAttribute('data-font-size', cur);
+  window.getFontSize = function(){ return localStorage.getItem(KEY)||'small'; };
+  window.setFontSize = function(lv){
+    if(['small','medium','large'].indexOf(lv)<0) return;
+    localStorage.setItem(KEY, lv);
+    document.documentElement.setAttribute('data-font-size', lv);
+    window.dispatchEvent(new Event('resize'));
+  };
+})();
+</script>
+
+</head>
+<body>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <span class="tb-title">🍽️ 菜品管理</span>
+  <div class="role-tag" id="roleTag" onclick="openRoleSwitcher()">🍽️ 点菜员</div>
+</div>
+
+<!-- 桌台区 -->
+<div class="table-section">
+  <div class="ts-header">
+    <span class="ts-title">选择桌台</span>
+    <span class="ts-add" onclick="openTableMgr()">⚙️ 管理桌台</span>
+  </div>
+  <div class="table-grid" id="tableGrid"><div style="padding:20px;text-align:center;color:var(--text-m);grid-column:1/-1;">加载中...</div></div>
+</div>
+<script>setTimeout(function(){if(!document.getElementById('tableGrid').innerHTML.trim()||document.getElementById('tableGrid').innerHTML.indexOf('加载中')>=0){document.getElementById('tableGrid').innerHTML='<button class="table-btn empty"><span class="tb-num">1桌</span></button><button class="table-btn empty"><span class="tb-num">2桌</span></button>';document.getElementById('menuList').innerHTML='<div class="no-menu"><div class="nm-icon">🍜</div><div>强制渲染测试</div></div>';}},2000);</script>
+
+<!-- 套餐/单点切换栏（套餐模式显示） -->
+<div class="tc-mode-bar" id="tcModeBar" style="display:none;">
+  <div class="tc-mode-tab active" id="tcTabSet" onclick="switchDishMode('taocan')">🍱 套餐</div>
+  <div class="tc-mode-tab" id="tcTabSingle" onclick="switchDishMode('single')">🍽️ 单品</div>
+</div>
+
+<!-- 菜单搜索 -->
+<div class="menu-search-bar" id="menuSearchBar" style="display:none;">
+  <input type="text" id="menuSearchInput" placeholder="搜菜品..." oninput="onMenuSearch()">
+</div>
+
+<!-- 菜单分类导航 -->
+<div class="menu-cat-bar" id="menuCatBar"></div>
+
+<!-- 菜单列表 -->
+<div class="menu-list" id="menuList">
+  <div class="no-menu">
+    <div class="nm-icon">🍜</div>
+    <div>请先选择桌台</div>
+  </div>
+</div>
+
+<!-- 今日结账记录 -->
+<div class="history-section" id="historySection" style="display:none;">
+  <div class="hs-title">今日结账记录</div>
+  <div id="historyList"></div>
+</div>
+
+<!-- 底部订单栏（选桌后显示） -->
+<div class="order-bar" id="orderBar" style="display:none;" onclick="openOrderDrawer()">
+  <div class="ob-cart">🛒<span class="ob-badge" id="obBadge">0</span></div>
+  <div class="ob-info">
+    <div class="ob-count" id="obCount">已点 0 道菜</div>
+    <div class="ob-total" id="obTotal">¥0.00</div>
+  </div>
+  <div class="ob-btn">查看订单 ›</div>
+</div>
+
+<!-- ══ 订单抽屉 ══ -->
+<div class="drawer-mask" id="drawerMask" onclick="closeOrderDrawer()"></div>
+<div class="drawer" id="orderDrawer" style="transform:translateY(120%);">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">
+    <span class="dt-name" id="drawerTitle">当前订单</span>
+    <span class="dt-close" onclick="closeOrderDrawer()">×</span>
+  </div>
+  <div class="drawer-body" id="orderItems"></div>
+  <div class="drawer-footer">
+    <div class="df-row">
+      <span class="label">小计</span>
+      <span class="val" id="dfSubtotal">¥0.00</span>
+    </div>
+    <div class="discount-row">
+      <span class="dr-label">优惠减免：</span>
+      <input type="number" id="discountInput" value="0" min="0" step="0.5" oninput="updateFooter()">
+      <span class="dr-label">元</span>
+    </div>
+    <div class="df-row big">
+      <span class="label">应付</span>
+      <span class="val" id="dfTotal">¥0.00</span>
+    </div>
+    <button class="confirm-order-btn" id="confirmOrderBtn" onclick="confirmOrderOnly()">✅ 确认下单</button>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      <button class="checkout-btn" id="checkoutBtn" onclick="openCheckout()" style="flex:1;">💳 去结账</button>
+      <button class="clear-order-btn" onclick="clearCurrentOrder()" style="flex-shrink:0;padding:14px 12px;">🗑️</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 结账弹窗 ══ -->
+<div class="modal-mask" id="checkoutModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div class="mh-title" id="checkoutTableName">1桌 结账</div>
+      <div class="mh-sub" id="checkoutSubInfo">共 0 道菜</div>
+    </div>
+    <div class="modal-body">
+      <div class="mb-total">
+        <div class="mbt-label">应付金额</div>
+        <div class="mbt-amt" id="checkoutAmt">¥0.00</div>
+      </div>
+      <div class="pay-methods">
+        <div class="pay-method selected" id="pm_wechat" onclick="selectPay('wechat')">
+          <div class="pm-icon">📱</div><div class="pm-name">微信</div>
+        </div>
+        <div class="pay-method" id="pm_alipay" onclick="selectPay('alipay')">
+          <div class="pm-icon">💙</div><div class="pm-name">支付宝</div>
+        </div>
+        <div class="pay-method" id="pm_cash" onclick="selectPay('cash')">
+          <div class="pm-icon">💵</div><div class="pm-name">现金</div>
+        </div>
+        <div class="pay-method" id="pm_card" onclick="selectPay('card')">
+          <div class="pm-icon">💳</div><div class="pm-name">刷卡</div>
+        </div>
+      </div>
+      <div id="cashRow" style="display:none;">
+        <div class="received-row">
+          <label>收到：</label>
+          <input type="number" id="receivedInput" placeholder="0.00" oninput="updateChange()">
+        </div>
+        <div class="change-row" id="changeRow"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="cancel" onclick="closeCheckout()">取消</button>
+      <button class="confirm" onclick="confirmCheckout()">确认收款</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 小票弹窗 ══ -->
+<div class="modal-mask receipt-modal" id="receiptModal">
+  <div class="modal-box">
+    <div class="receipt" id="receiptContent"></div>
+    <div class="receipt-btns">
+      <button class="btn-close-r" onclick="closeReceipt()">关闭</button>
+      <button class="btn-save-r" onclick="saveReceipt()">📸 截图保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 桌台管理抽屉 ══ -->
+<div class="drawer-mask" id="tableMgrMask" onclick="closeTableMgr()"></div>
+<div class="drawer" id="tableMgrDrawer" style="transform:translateY(120%);">
+  <div class="drawer-handle"></div>
+  <div class="drawer-title">
+    <span class="dt-name">⚙️ 桌台管理</span>
+    <span class="dt-close" onclick="closeTableMgr()">×</span>
+  </div>
+  <div class="table-mgr">
+    <div class="tm-row">
+      <label>桌台名称：</label>
+      <input type="text" id="newTableName" placeholder="如：1桌、VIP包间">
+      <button class="tm-btn" onclick="addTable()">添加</button>
+    </div>
+    <div class="table-list" id="tableList"></div>
+  </div>
+</div>
+
+<!-- ══ 角色切换弹窗 ══ -->
+<div class="role-modal" id="roleModal">
+  <div class="role-box">
+    <div class="rb-title">切换角色</div>
+    <div class="role-option" id="msWaiter" onclick="switchRole('waiter')">
+      <span class="ro-icon">🍽️</span>
+      <div><div class="ro-name">点菜员</div><div class="ro-desc">专注菜品管理，看不到经营数据</div></div>
+    </div>
+    <div class="role-option" id="msBoss" onclick="switchRole('boss')">
+      <span class="ro-icon">👔</span>
+      <div><div class="ro-name">老板</div><div class="ro-desc">查看完整经营数据和分析报告</div></div>
+    </div>
+    <div class="role-option" id="msManager" onclick="switchRole('manager')">
+      <span class="ro-icon">🏪</span>
+      <div><div class="ro-name">店长</div><div class="ro-desc">管理记账、库存和利润分析</div></div>
+    </div>
+    <div class="role-option" id="msBuyer" onclick="switchRole('buyer')">
+      <span class="ro-icon">🛒</span>
+      <div><div class="ro-name">采购员</div><div class="ro-desc">专注采购和库存管理</div></div>
+    </div>
+    <button class="rb-cancel" onclick="closeRoleSwitcher()">取消</button>
+  </div>
+</div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav" id="bottomNav"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// Polyfill + fallback
+if(!Array.prototype.find){Array.prototype.find=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return this[i];}return undefined;};}
+if(!String.prototype.padStart){String.prototype.padStart=function(len,str){str=str||' ';var s=String(this);while(s.length<len){s=str+s;}return s.slice(0,len);};}
+(function(){
+  if(!window.loadJSON)window.loadJSON=function(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):[];}catch(e){return[];}};
+  if(!window.saveJSON)window.saveJSON=function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}};
+  if(!window.todayStr)window.todayStr=function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  if(!window.pad)window.pad=function(n){return String(n).padStart(2,'0');};
+  if(!window.fmt0)window.fmt0=function(n){return Number(n||0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');};
+  if(!window.fmt2)window.fmt2=function(n){return Number(n||0).toFixed(2);};
+  if(!window.getUsers)window.getUsers=function(){return loadJSON('sxs_users')||[];};
+  if(!window.saveUsers)window.saveUsers=function(v){saveJSON('sxs_users',v);};
+  if(!window.getCurrentUserId)window.getCurrentUserId=function(){
+    var id=localStorage.getItem('sxs_current_user');
+    if(!id){
+      var users=getUsers();
+      if(!users.length){var boss={id:'u_boss_001',name:'老板',role:'boss',active:true,createdAt:todayStr()};saveUsers([boss]);id=boss.id;}
+      else{var b=null;for(var i=0;i<users.length;i++){if(users[i].role==='boss'){b=users[i];break;}}id=b?b.id:users[0].id;}
+      localStorage.setItem('sxs_current_user',id);
+    }
+    return id;
+  };
+  if(!window.getCurrentUser)window.getCurrentUser=function(){var id=getCurrentUserId();var users=getUsers();for(var i=0;i<users.length;i++){if(users[i].id===id)return users[i];}return null;};
+  if(!window.getUserPerms)window.getUserPerms=function(){
+    var u=getCurrentUser();if(!u)return{};
+    if(u.role==='boss')return{baobiao:true,caidan:true,caigou:'editor',kucun:true,shezhi:true,jizhang:true};
+    if(u.role==='chef')return{baobiao:true,chef_review:true,caigou:'editor',jizhang:true};
+    if(u.role==='manager')return{baobiao:true,caigou:'editor',kucun:true,jizhang:true};
+    if(u.role==='buyer')return{caigou:'editor',jizhang:true,kucun:true};
+    if(u.role==='keeper')return{kucun:true,jizhang:true,caigou:'editor'};
+    if(u.role==='waiter')return{caidan:true};
+    return u.perms||{};
+  };
+  if(!window.userUrl)window.userUrl=function(path){var sep=path.indexOf('?')>=0?'&':'?';return path+sep+'uid='+encodeURIComponent(getCurrentUserId());};
+  if(!window.renderBottomNav)window.renderBottomNav=function(activeKey){
+    var perms=getUserPerms();var tabs=[];
+    if(perms.baobiao)tabs.push({key:'baobiao',icon:'📊',label:'报表',href:'catering.html'});
+    if(perms.caidan){var st=localStorage.getItem('sxs_shop_type')||'chaocai';if(st==='taocan'){tabs.push({key:'caidan',icon:'📋',label:'菜单管理',href:'taocan.html'});tabs.push({key:'dingdan',icon:'📊',label:'订单',href:'dingdan.html'});}else{tabs.push({key:'caidan',icon:'🍽️',label:'菜品管理',href:'caidan.html'});}}
+    if(perms.caigou)tabs.push({key:'caigou',icon:'🛒',label:'采购',href:'caigou.html'});
+    if(perms.kucun)tabs.push({key:'kucun',icon:'📦',label:'库存',href:'kucun.html'});
+    if(perms.jizhang)tabs.push({key:'jizhang',icon:'📒',label:'记账',href:'jizhang.html'});
+    tabs.push({key:'shezhi',icon:'👤',label:'我的',href:'shezhi.html'});
+    var seen={},filtered=[];tabs.forEach(function(t){if(!seen[t.key]){seen[t.key]=true;filtered.push(t);}});
+    var h='';filtered.forEach(function(t){var act=t.key===activeKey?' active':'';h+='<a class="nav-item'+act+'" href="'+userUrl(t.href)+'">'+t.icon+'<span class="n-label">'+t.label+'</span></a>';});
+    var nav=document.getElementById('bottomNav');if(nav)nav.innerHTML=h;
+  };
+  if(!window.getPurchaseFlow)window.getPurchaseFlow=function(){return loadJSON('sxs_flow_config')||{chefReview:false,bossReview:false};};
+  if(!window.savePurchaseFlow)window.savePurchaseFlow=function(flow){saveJSON('sxs_flow_config',flow);};
+  if(!window.getJizhang)window.getJizhang=function(){var d=loadJSON('sxs_jizhang');return Array.isArray(d)?d:[];};
+  if(!window.addLog)window.addLog=function(){};
+  if(!window.updateNotifBell)window.updateNotifBell=function(){};
+  if(!window.getNotificationCount)window.getNotificationCount=function(){return 0;};
+  if(!window.getCustomCatLabel)window.getCustomCatLabel=function(id){return id;};
+  if(!window.getCustomIncomeCatLabel)window.getCustomIncomeCatLabel=function(id){return id;};
+  if(!window.switchRole)window.switchRole=function(){location.reload();};
+  if(!window.createTimeElement)window.createTimeElement=function(){return document.createElement('span');};
+  if(!window.toast)window.toast=function(msg){var el=document.getElementById('toast');if(el){el.textContent=msg;el.style.opacity='1';setTimeout(function(){el.style.opacity='0';},2000);}};
+})();
+</script>
+<script src="gongxiang.js?v=20260715g" onerror="console.warn('gongxiang.js not loaded, using fallback')"></script>
+<script>
+(function(){
+  // 立即渲染桌台网格和菜单——不依赖DOMContentLoaded
+  var tables; try{tables=loadJSON('sxs_tables');}catch(e){tables=[];}
+  if(!tables.length){
+    tables=[];for(var i=1;i<=8;i++)tables.push({id:'t'+i,name:i+'桌',order:[],openAt:null,status:'empty'});
+    try{saveJSON('sxs_tables',tables);}catch(e){}
+  }
+  var grid=document.getElementById('tableGrid');
+  if(grid){
+    var h='';tables.forEach(function(t){
+      h+='<button class="table-btn empty" onclick="selectTable(\''+t.id+'\')"><span class="tb-num">'+(t.name||t.id)+'</span></button>';
+    });
+    grid.innerHTML=h;
+  }
+  var menuEl=document.getElementById('menuList');
+  if(menuEl)menuEl.innerHTML='<div class="no-menu"><div class="nm-icon">🍜</div><div>请先选择桌台开始点菜</div></div>';
+})();
+</script>
+<script>
+// ═══════════ 角色权限 ═══════════
+var currentRole = new URLSearchParams(location.search).get('role') || localStorage.getItem('youshu_role') || 'waiter';
+localStorage.setItem('youshu_role', currentRole);
+var roleNames = { boss:'👔 老板', buyer:'🛒 采购员', manager:'🏪 店长', waiter:'🍽️ 点菜员' };
+
+// ═══════════ 底部导航 ═══════════
+// 使用共享模块 renderBottomNav + userUrl（勿覆盖）
+function updateRoleUI(){
+  var tag=document.getElementById('roleTag');
+  if(tag){ tag.textContent=roleNames[currentRole]||'🍽️ 点菜员'; tag.className='role-tag '+(currentRole||'waiter'); }
+}
+function openRoleSwitcher(){
+  document.getElementById('roleModal').classList.add('show');
+  ['waiter','boss','manager','buyer'].forEach(function(r){
+    var id='ms'+r.charAt(0).toUpperCase()+r.slice(1);
+    var el=document.getElementById(id);
+    if(el) el.classList.toggle('selected', r===currentRole);
+  });
+}
+function closeRoleSwitcher(){ document.getElementById('roleModal').classList.remove('show'); }
+function switchRole(role){
+  currentRole=role; localStorage.setItem('youshu_role',role);
+  if(role!=='waiter'){
+    location.href=userUrl('catering.html');
+  } else {
+    updateRoleUI(); closeRoleSwitcher();
+  }
+}
+
+// ═══════════ 底部导航 ═══════════
+// 直接使用共享模块的 renderBottomNav('caidan')，在 init 里调用
+
+// ═══════════ 桌台数据 ═══════════
+function getTables(){ return loadJSON('sxs_tables'); }
+function saveTables(v){ saveJSON('sxs_tables',v); }
+
+var selectedTable = null; // 当前选中桌台id
+
+function initDefaultTables(){
+  if(getTables().length===0){
+    var defaults=[];
+    for(var i=1;i<=8;i++){
+      defaults.push({ id:'t'+i, name:i+'桌', order:[], openAt:null, status:'empty' });
+    }
+    saveTables(defaults);
+  }
+}
+
+function renderTableGrid(){
+  var tables=getTables();
+  var h='';
+  tables.forEach(function(t){
+    var isActive=selectedTable===t.id;
+    var cls='table-btn '+(isActive?'active':(t.status==='open'?'open':'empty'));
+    var total=0; (t.order||[]).forEach(function(it){total+=it.price*it.qty;});
+    var badge=(t.order&&t.order.length)?'<span class="tb-badge">'+t.order.length+'</span>':'';
+    var amtTxt=(t.status==='open'&&total>0)?'<span class="tb-amt">¥'+Math.round(total)+'</span>':'';
+    var durTxt='';
+    if(t.status==='open' && t.openAt){
+      var mins=Math.floor((Date.now()-new Date(t.openAt).getTime())/60000);
+      durTxt=mins>0?'<span class="tb-dur">'+mins+'分钟</span>':'';
+    }
+    h+='<button class="'+cls+'" onclick="selectTable(\''+t.id+'\')">'+badge+'<span class="tb-num">'+(t.name||t.id)+'</span>'+durTxt+amtTxt+'</button>';
+  });
+  document.getElementById('tableGrid').innerHTML=h;
+}
+
+function selectTable(id){
+  selectedTable=id;
+  renderTableGrid();
+  renderMenu();
+  updateOrderBar();
+}
+
+// ═══════════ 配方/菜品数据 ═══════════
+function getRecipes(){ return loadJSON('sxs_recipes'); }
+function getTaocans(){ return loadJSON('sxs_taocans'); }
+function getShopType(){ return localStorage.getItem('sxs_shop_type') || 'chaocai'; }
+
+var dishMode = 'taocan'; // 'taocan' | 'single'
+
+function getCategories(recipes){
+  var cats=[];
+  var seen={};
+  recipes.forEach(function(r){
+    var c=r.category||'其他';
+    if(!seen[c]){ seen[c]=true; cats.push(c); }
+  });
+  return cats;
+}
+
+var currentMenuCat = null;
+
+function renderMenuCatBar(recipes){
+  var cats=getCategories(recipes);
+  if(!currentMenuCat && cats.length) currentMenuCat=cats[0];
+  var h='<span class="cat-chip'+(currentMenuCat==='__all'?' active':'')+'" onclick="setMenuCat(\'__all\')">全部</span>';
+  cats.forEach(function(c){
+    h+='<span class="cat-chip'+(currentMenuCat===c?' active':'')+'" onclick="setMenuCat(\''+c.replace(/'/g,"\\'")+'\')">'+c+'</span>';
+  });
+  document.getElementById('menuCatBar').innerHTML=h;
+}
+
+function setMenuCat(c){
+  currentMenuCat=c;
+  var recipes=getRecipes();
+  renderMenuCatBar(recipes);
+  renderMenuItems(recipes);
+}
+
+function getTableOrder(){
+  if(!selectedTable) return [];
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  return t?(t.order||[]):[];
+}
+
+function renderMenu(){
+  var shopType = getShopType();
+  var tcModeBar = document.getElementById('tcModeBar');
+  if(shopType === 'taocan'){
+    tcModeBar.style.display = 'flex';
+  } else {
+    tcModeBar.style.display = 'none';
+    dishMode = 'single';
+  }
+
+  var recipes=getRecipes();
+  var searchBar=document.getElementById('menuSearchBar');
+  if(!selectedTable){
+    document.getElementById('menuList').innerHTML='<div class="no-menu"><div class="nm-icon">🍜</div><div>请先选择桌台</div></div>';
+    document.getElementById('menuCatBar').innerHTML='';
+    searchBar.style.display='none';
+    renderHistory();
+    return;
+  }
+
+  if(shopType === 'taocan' && dishMode === 'taocan'){
+    // 套餐模式
+    var taocans = getTaocans();
+    if(!taocans.length){
+      document.getElementById('menuList').innerHTML='<div class="no-menu"><div class="nm-icon">🍱</div><div>还没有套餐<br><a href="taocan.html" style="color:var(--brand);">去套餐管理创建 ›</a></div></div>';
+      document.getElementById('menuCatBar').innerHTML='';
+      searchBar.style.display='none';
+      return;
+    }
+    searchBar.style.display='block';
+    document.getElementById('menuCatBar').classList.add('with-search');
+    document.getElementById('menuCatBar').innerHTML='';
+    renderTaocanItems(taocans);
+    document.getElementById('historySection').style.display='none';
+    return;
+  }
+
+  // 单品模式（原有逻辑）
+  if(!recipes.length){
+    document.getElementById('menuList').innerHTML='<div class="no-menu"><div class="nm-icon">🍳</div><div>还没有菜品<br><a href="menu_new.html" style="color:var(--brand);">去菜品管理添加菜品 ›</a></div></div>';
+    document.getElementById('menuCatBar').innerHTML='';
+    searchBar.style.display='none';
+    return;
+  }
+  searchBar.style.display='block';
+  document.getElementById('menuCatBar').classList.add('with-search');
+  renderMenuCatBar(recipes);
+  renderMenuItems(recipes);
+  document.getElementById('historySection').style.display='none';
+}
+
+function switchDishMode(mode){
+  dishMode = mode;
+  document.getElementById('tcTabSet').classList.toggle('active', mode==='taocan');
+  document.getElementById('tcTabSingle').classList.toggle('active', mode==='single');
+  renderMenu();
+}
+
+function renderTaocanItems(taocans){
+  var order = getTableOrder();
+  var recipes = getRecipes();
+  var searchText = (document.getElementById('menuSearchInput').value||'').trim().toLowerCase();
+  var filtered = taocans;
+  if(searchText){
+    filtered = taocans.filter(function(t){ return t.name.toLowerCase().indexOf(searchText)>=0; });
+  }
+  if(!filtered.length){
+    document.getElementById('menuList').innerHTML='<div class="no-menu" style="padding:20px 0;"><div>没有匹配的套餐</div></div>';
+    return;
+  }
+  var h = '';
+  filtered.forEach(function(t){
+    var ordered = order.find(function(o){ return o.id === t.id && o.isTaocan; });
+    var qty = ordered ? ordered.qty : 0;
+    var compHtml = t.components.map(function(c){
+      var r = recipes.find(function(x){ return x.id === c.recipeId; });
+      var addStr = c.addPrice > 0 ? ' +¥'+c.addPrice : '';
+      return '<div class="tc-comp-item">'+
+        '<span class="tc-comp-icon">'+(r?(r.icon||'🍳'):'📦')+'</span>'+
+        '<span class="tc-comp-name">'+(r?r.name:'已删除')+'</span>'+
+        '<span class="tc-comp-type '+c.type+'">'+(c.type==='must'?'必选':'可选')+addStr+'</span>'+
+      '</div>';
+    }).join('');
+    h += '<div class="tc-card">'+
+      '<div class="tc-head" onclick="toggleTcComp(\''+t.id+'\')">'+
+        '<span class="tc-icon">'+(t.icon||'🍱')+'</span>'+
+        '<div class="tc-info">'+
+          '<div class="tc-name">'+t.name+'</div>'+
+          '<div class="tc-meta">'+t.components.length+'个组件'+(qty>0?' · 已点'+qty+'份':'')+'</div>'+
+        '</div>'+
+        '<span class="tc-price">¥'+t.price+'</span>'+
+      '</div>'+
+      '<div class="tc-comp-list" id="tccomp_'+t.id+'">'+compHtml+
+        '<div style="padding:8px 0;">'+
+          '<button class="tc-add-btn" style="width:auto;padding:8px 16px;border-radius:10px;font-size:var(--fs-14);" onclick="event.stopPropagation();addTaocanToOrder(\''+t.id+'\')">＋ 加入订单</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('menuList').innerHTML = h;
+}
+
+function toggleTcComp(id){
+  var el = document.getElementById('tccomp_'+id);
+  if(el) el.classList.toggle('show');
+}
+
+function addTaocanToOrder(taocanId){
+  var taocans = getTaocans();
+  var t = taocans.find(function(x){ return x.id === taocanId; });
+  if(!t) return;
+  var tables = getTables();
+  var tbl = tables.find(function(x){ return x.id === selectedTable; });
+  if(!tbl) return;
+  if(!tbl.order) tbl.order = [];
+  // 查找已有
+  var existing = tbl.order.find(function(o){ return o.id === taocanId && o.isTaocan; });
+  if(existing){
+    existing.qty += 1;
+  } else {
+    tbl.order.push({
+      id: taocanId,
+      name: t.name,
+      icon: t.icon || '🍱',
+      price: t.price,
+      qty: 1,
+      isTaocan: true
+    });
+  }
+  saveTables(tables);
+  renderTableGrid();
+  renderTaocanItems(getTaocans());
+  updateOrderBar();
+  toast('套餐「'+t.name+'」已加入');
+}
+
+function renderMenuItems(recipes){
+  var order=getTableOrder();
+  var searchText=(document.getElementById('menuSearchInput').value||'').trim().toLowerCase();
+  var filtered=currentMenuCat==='__all'?recipes:recipes.filter(function(r){return (r.category||'其他')===currentMenuCat;});
+  if(searchText){
+    filtered=filtered.filter(function(r){return r.name.toLowerCase().indexOf(searchText)>=0;});
+  }
+  if(!filtered.length){
+    document.getElementById('menuList').innerHTML='<div class="no-menu" style="padding:20px 0;"><div>此分类暂无菜品</div></div>';
+    return;
+  }
+  var h='';
+  filtered.forEach(function(r){
+    var ordered=order.find(function(o){return o.id===r.id;});
+    var qty=ordered?ordered.qty:0;
+    var note=ordered?ordered.note||'':'';
+    var cost=calcDishCost(r);
+    var costText=cost>0?'食材成本 ¥'+fmt2(cost):'';
+    var noteHtml=note?'<span class="mi-note-tag">'+note+'</span>':'';
+    h+='<div class="menu-item">'+
+      '<div class="mi-icon">'+(r.icon||'🍽️')+'</div>'+
+      '<div class="mi-info">'+
+        '<div class="mi-name">'+r.name+noteHtml+'</div>'+
+        '<div class="mi-cost">'+costText+'</div>'+
+      '</div>'+
+      '<div class="mi-price">¥'+(r.price||0)+'</div>'+
+      '<div class="mi-ctrl">'+
+        '<span class="mi-note'+(note?' has':'')+'" onclick="openDishNote(\''+r.id+'\')" title="备注">✏️</span>'+
+        '<button class="mi-btn minus" onclick="changeQty(\''+r.id+'\', -1, this)" '+(qty===0?'disabled':'')+'>−</button>'+
+        '<span class="mi-qty" id="qty_'+r.id+'">'+(qty||0)+'</span>'+
+        '<button class="mi-btn plus" onclick="changeQty(\''+r.id+'\', 1, this)">+</button>'+
+      '</div>'+
+    '</div>';
+  });
+  document.getElementById('menuList').innerHTML=h;
+}
+
+function onMenuSearch(){
+  if(getShopType()==='taocan' && dishMode==='taocan'){
+    renderTaocanItems(getTaocans());
+  } else {
+    var recipes=getRecipes();
+    renderMenuItems(recipes);
+  }
+}
+
+function calcDishCost(recipe){
+  var prods=loadJSON('sp_prods');
+  var conv=loadObj('sxs_recipe_conv');
+  var total=0;
+  (recipe.ingredients||[]).forEach(function(ing){
+    var p=prods.find(function(x){return x.id===ing.prodId;});
+    if(!p) return;
+    var c=conv[ing.prodId]||{rate:1};
+    var unitPrice=(p.lastPrice||0)/c.rate;
+    total+=unitPrice*(ing.qty||0);
+  });
+  var seasFactor=recipe.seasoningFactor||0.02;
+  total+=((recipe.price||0)*seasFactor);
+  return total;
+}
+
+// ═══════════ 菜品备注 ═══════════
+var noteDishId = null;
+function openDishNote(recipeId){
+  noteDishId = recipeId;
+  var order = getTableOrder();
+  var item = order.find(function(o){return o.id===recipeId;});
+  var curNote = item?item.note||'':'';
+  // 创建弹窗
+  var mask = document.createElement('div');
+  mask.className = 'note-mask';
+  mask.id = 'noteMask';
+  mask.onclick = closeDishNote;
+  var popup = document.createElement('div');
+  popup.className = 'note-popup';
+  popup.id = 'notePopup';
+  var recipe = getRecipes().find(function(r){return r.id===recipeId;});
+  popup.innerHTML = '<div class="np-title">📝 '+(recipe?recipe.name:'')+' 备注</div>'+
+    '<input class="np-input" id="noteInput" placeholder="如：少辣、不要葱、加蒜..." value="'+curNote.replace(/"/g,'&quot;')+'">'+
+    '<div class="np-quick" id="noteQuick"></div>'+
+    '<div class="np-btns">'+
+      '<button class="btn-cancel" onclick="closeDishNote()">取消</button>'+
+      '<button class="btn-ok" onclick="saveDishNote()">确定</button>'+
+    '</div>';
+  document.body.appendChild(mask);
+  document.body.appendChild(popup);
+  // 快速备注标签
+  var quicks = ['少辣','不要辣','少盐','不要葱','不要蒜','不要香菜','加辣','打包'];
+  var qh = '';
+  quicks.forEach(function(q){
+    qh += '<span onclick="quickNote(\''+q+'\')">'+q+'</span>';
+  });
+  document.getElementById('noteQuick').innerHTML = qh;
+  setTimeout(function(){ document.getElementById('noteInput').focus(); }, 100);
+}
+
+function quickNote(txt){
+  var inp = document.getElementById('noteInput');
+  if(inp) inp.value = txt;
+}
+
+function saveDishNote(){
+  var note = document.getElementById('noteInput').value.trim();
+  closeDishNote();
+  if(!noteDishId) return;
+  var tables = getTables();
+  var t = tables.find(function(x){return x.id===selectedTable;});
+  if(!t||!t.order) return;
+  var item = t.order.find(function(o){return o.id===noteDishId;});
+  if(!item) return;
+  item.note = note;
+  saveTables(tables);
+  renderMenuItems(getRecipes());
+  if(document.getElementById('orderDrawer').style.transform.indexOf('0')>=0) renderOrderItems();
+}
+
+function closeDishNote(){
+  noteDishId = null;
+  var m = document.getElementById('noteMask');
+  var p = document.getElementById('notePopup');
+  if(m) m.remove();
+  if(p) p.remove();
+}
+
+// ═══════════ 点菜操作 ═══════════
+function changeQty(recipeId, delta, btn){
+  if(!selectedTable) return;
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  if(!t) return;
+  if(!t.order) t.order=[];
+  var recipes=getRecipes();
+  var recipe=recipes.find(function(r){return r.id===recipeId;});
+  if(!recipe) return;
+  var idx=t.order.findIndex(function(o){return o.id===recipeId;});
+  if(idx>=0){
+    t.order[idx].qty+=delta;
+    if(t.order[idx].qty<=0) t.order.splice(idx,1);
+  } else if(delta>0){
+    t.order.push({ id:recipeId, name:recipe.name, price:recipe.price||0, icon:recipe.icon||'🍽️', qty:1, note:'' });
+  }
+  if(t.order.length>0) t.status='open';
+  else { t.status='empty'; t.openAt=null; }
+  if(t.status==='open' && !t.openAt) t.openAt=new Date().toISOString();
+  saveTables(tables);
+  // 更新菜单单个按钮数量（不重绘整个菜单）
+  var qEl=document.getElementById('qty_'+recipeId);
+  var curOrder=t.order.find(function(o){return o.id===recipeId;});
+  var newQty=curOrder?curOrder.qty:0;
+  if(qEl) qEl.textContent=newQty;
+  // 更新 minus 按钮状态
+  var parent=btn.parentElement;
+  var minusBtn=parent.querySelector('.minus');
+  if(minusBtn) minusBtn.disabled=(newQty===0);
+  renderTableGrid();
+  updateOrderBar();
+  addLog('order_change', '点菜: '+recipe.name+(delta>0?' +':' -')+Math.abs(delta), 'table');
+}
+
+// ═══════════ 订单栏 ═══════════
+function updateOrderBar(){
+  var bar=document.getElementById('orderBar');
+  if(!selectedTable){ bar.style.display='none'; return; }
+  var order=getTableOrder();
+  var total=0; var count=0;
+  order.forEach(function(o){ total+=o.price*o.qty; count+=o.qty; });
+  document.getElementById('obBadge').textContent=count;
+  document.getElementById('obCount').textContent='已点 '+order.length+' 道菜，'+count+' 份';
+  document.getElementById('obTotal').textContent='¥'+fmt2(total);
+  bar.style.display='flex';
+}
+
+// ═══════════ 订单抽屉 ═══════════
+function openOrderDrawer(){
+  if(!selectedTable) return;
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  document.getElementById('drawerTitle').textContent=(t?t.name:'')+'  当前订单';
+  renderOrderItems();
+  document.getElementById('drawerMask').classList.add('show');
+  document.getElementById('orderDrawer').style.transform='translateX(-50%) translateY(0)';
+  document.getElementById('discountInput').value='0';
+  updateFooter();
+}
+
+function closeOrderDrawer(){
+  document.getElementById('drawerMask').classList.remove('show');
+  document.getElementById('orderDrawer').style.transform='translateX(-50%) translateY(120%)';
+}
+
+function renderOrderItems(){
+  var order=getTableOrder();
+  var checkoutBtn=document.getElementById('checkoutBtn');
+  if(!order.length){
+    document.getElementById('orderItems').innerHTML='<div class="order-empty">还没有点菜</div>';
+    if(checkoutBtn) checkoutBtn.disabled=true;
+    return;
+  }
+  if(checkoutBtn) checkoutBtn.disabled=false;
+  var h='';
+  order.forEach(function(o){
+    var noteTag = o.note ? '<span style="font-size:var(--fs-14);color:#e65100;background:#fff3e0;padding:1px 5px;border-radius:6px;margin-left:4px;">'+o.note+'</span>' : '';
+    h+='<div class="order-item">'+
+      '<span style="font-size:var(--fs-20);flex-shrink:0;">'+(o.icon||'🍽️')+'</span>'+
+      '<span class="oi-name">'+o.name+noteTag+'</span>'+
+      '<span class="oi-price">¥'+o.price+'</span>'+
+      '<div class="oi-ctrl">'+
+        '<button class="oi-btn minus" onclick="changeQtyInDrawer(\''+o.id+'\', -1)">−</button>'+
+        '<span class="oi-qty" id="oqty_'+o.id+'">'+o.qty+'</span>'+
+        '<button class="oi-btn plus" onclick="changeQtyInDrawer(\''+o.id+'\', 1)">+</button>'+
+      '</div>'+
+      '<span class="oi-sub">¥'+fmt2(o.price*o.qty)+'</span>'+
+    '</div>';
+  });
+  document.getElementById('orderItems').innerHTML=h;
+  updateFooter();
+}
+
+function changeQtyInDrawer(recipeId, delta){
+  if(!selectedTable) return;
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  if(!t||!t.order) return;
+  var idx=t.order.findIndex(function(o){return o.id===recipeId;});
+  if(idx>=0){
+    t.order[idx].qty+=delta;
+    if(t.order[idx].qty<=0) t.order.splice(idx,1);
+  }
+  if(t.order.length===0){ t.status='empty'; t.openAt=null; }
+  saveTables(tables);
+  renderOrderItems();
+  renderTableGrid();
+  updateOrderBar();
+  // 同步菜单数量显示
+  var qEl=document.getElementById('qty_'+recipeId);
+  if(qEl){ var cur=t.order.find(function(o){return o.id===recipeId;}); qEl.textContent=cur?cur.qty:0; }
+}
+
+function updateFooter(){
+  var order=getTableOrder();
+  var subtotal=0; order.forEach(function(o){ subtotal+=o.price*o.qty; });
+  var discount=parseFloat(document.getElementById('discountInput').value)||0;
+  var total=Math.max(0, subtotal-discount);
+  document.getElementById('dfSubtotal').textContent='¥'+fmt2(subtotal);
+  document.getElementById('dfTotal').textContent='¥'+fmt2(total);
+}
+
+function clearCurrentOrder(){
+  if(!selectedTable) return;
+  if(!confirm('确定清空本桌订单？')) return;
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  if(t){ t.order=[]; t.status='empty'; t.openAt=null; }
+  saveTables(tables);
+  renderTableGrid();
+  renderMenuItems(getRecipes());
+  updateOrderBar();
+  closeOrderDrawer();
+}
+
+function confirmOrderOnly(){
+  var order=getTableOrder();
+  if(!order.length){ toast('还没有点菜',false); return; }
+  closeOrderDrawer();
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  var total=0; order.forEach(function(o){ total+=o.price*o.qty; });
+  toast('已确认 '+(t?t.name:'')+' 的订单，共 ¥'+fmt2(total), true);
+}
+
+// ═══════════ 结账 ═══════════
+var selectedPayMethod = 'wechat';
+
+function openCheckout(){
+  var order=getTableOrder();
+  if(!order.length){ toast('还没有点菜',false); return; }
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  var subtotal=0; order.forEach(function(o){ subtotal+=o.price*o.qty; });
+  var discount=parseFloat(document.getElementById('discountInput').value)||0;
+  var total=Math.max(0,subtotal-discount);
+  document.getElementById('checkoutTableName').textContent=(t?t.name:'')+'  结账';
+  document.getElementById('checkoutSubInfo').textContent='共 '+order.length+' 道菜，¥'+fmt2(subtotal)+(discount>0?'  已优惠¥'+fmt2(discount):'');
+  document.getElementById('checkoutAmt').textContent='¥'+fmt2(total);
+  document.getElementById('receivedInput').value='';
+  document.getElementById('changeRow').innerHTML='';
+  selectPay('wechat');
+  document.getElementById('checkoutModal').classList.add('show');
+  closeOrderDrawer();
+}
+
+function closeCheckout(){ document.getElementById('checkoutModal').classList.remove('show'); }
+
+function selectPay(method){
+  selectedPayMethod=method;
+  ['wechat','alipay','cash','card'].forEach(function(m){
+    var el=document.getElementById('pm_'+m);
+    if(el) el.classList.toggle('selected', m===method);
+  });
+  document.getElementById('cashRow').style.display=(method==='cash')?'block':'none';
+}
+
+function updateChange(){
+  var amtText=document.getElementById('checkoutAmt').textContent.replace('¥','');
+  var amt=parseFloat(amtText)||0;
+  var recv=parseFloat(document.getElementById('receivedInput').value)||0;
+  var change=recv-amt;
+  var cr=document.getElementById('changeRow');
+  if(recv>0){
+    if(change>=0) cr.innerHTML='找零：<span class="change-val">¥'+fmt2(change)+'</span>';
+    else cr.innerHTML='<span style="color:var(--red);">收款不足 ¥'+fmt2(-change)+'</span>';
+  } else { cr.innerHTML=''; }
+}
+
+function confirmCheckout(){
+  var order=getTableOrder();
+  if(!order.length) return;
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===selectedTable;});
+  var subtotal=0; order.forEach(function(o){ subtotal+=o.price*o.qty; });
+  var discount=parseFloat(document.getElementById('discountInput').value)||0;
+  var total=Math.max(0,subtotal-discount);
+  var payNames={ wechat:'微信支付', alipay:'支付宝', cash:'现金', card:'刷卡' };
+  // 1. 写 sxs_jizhang 收入
+  var jz=loadJSON('sxs_jizhang');
+  var now=new Date();
+  var jzId='jz_'+Date.now();
+  jz.push({
+    id:jzId, date:todayStr(), time:nowTimeStr(),
+    catId:'caidan', catName:'点菜收款', catIcon:'🍽️', catColor:'#e8f5e9',
+    amount:total, type:'income', source:'table',
+    userId: getCurrentUserId(),
+    tableName:(t?t.name:''), payMethod:selectedPayMethod, discount:discount,
+    items:order.map(function(o){return {id:o.id,name:o.name,qty:o.qty,price:o.price,note:o.note||''};})
+  });
+  saveJSON('sxs_jizhang',jz);
+  // 2. 写 sxs_dish_sales
+  var sales=loadJSON('sxs_dish_sales'); if(!Array.isArray(sales)) sales=[];
+  order.forEach(function(o){
+    var rec=getRecipes().find(function(r){return r.id===o.id;});
+    var cost=rec?calcDishCost(rec):0;
+    sales.push({
+      id:'ds_'+Date.now()+'_'+o.id, date:todayStr(), time:nowTimeStr(),
+      recipeId:o.id, name:o.name, qty:o.qty,
+      userId: getCurrentUserId(),
+      price:o.price, total:o.price*o.qty,
+      snapshotCost:cost, source:'table', tableId:selectedTable
+    });
+  });
+  saveJSON('sxs_dish_sales',sales);
+  // 3. 清空桌台
+  var closedOrder=[].concat(order); // 备份用于小票
+  t.order=[]; t.status='empty'; t.openAt=null;
+  saveTables(tables);
+  closeCheckout();
+  renderTableGrid();
+  renderMenuItems(getRecipes());
+  updateOrderBar();
+  // 4. 显示小票
+  showReceipt({ table:t.name, order:closedOrder, subtotal:subtotal, discount:discount, total:total, payMethod:payNames[selectedPayMethod], time:nowTimeStr(), date:todayStr() });
+  addLog('checkout', (t?t.name:'')+'结账 ¥'+fmt2(total), 'table');
+}
+
+// ═══════════ 小票 ═══════════
+var lastReceiptData=null;
+function showReceipt(data){
+  lastReceiptData=data;
+  var shopName=localStorage.getItem('sxs_shop_name')||'餐小算餐厅';
+  var h='<div class="r-head">'+
+    '<div class="rh-shop">'+shopName+'</div>'+
+    '<div class="rh-meta">'+data.table+'  ·  '+data.date+' '+data.time+'</div>'+
+  '</div>';
+  data.order.forEach(function(o){
+    h+='<div class="r-item"><span class="ri-name">'+o.name+'</span><span class="ri-qty">×'+o.qty+'</span><span class="ri-sub">¥'+fmt2(o.price*o.qty)+'</span></div>';
+  });
+  h+='<hr class="r-divider">';
+  if(data.discount>0){
+    h+='<div class="r-item" style="color:var(--green);"><span class="ri-name">优惠</span><span class="ri-sub">-¥'+fmt2(data.discount)+'</span></div>';
+  }
+  h+='<div class="r-total"><span>合计</span><span>¥'+fmt2(data.total)+'</span></div>'+
+     '<div class="r-pay">支付方式：'+data.payMethod+'</div>'+
+     '<div class="r-thanks">谢谢惠顾，欢迎再次光临 🙏</div>';
+  document.getElementById('receiptContent').innerHTML=h;
+  document.getElementById('receiptModal').classList.add('show');
+  renderHistory();
+}
+
+function closeReceipt(){ document.getElementById('receiptModal').classList.remove('show'); }
+
+function saveReceipt(){
+  toast('请截屏或长按页面保存小票',true);
+}
+
+// ═══════════ 今日结账历史 ═══════════
+function renderHistory(){
+  var jz=loadJSON('sxs_jizhang');
+  var today=todayStr();
+  var records=jz.filter(function(r){ return r.source==='table' && r.date===today; });
+  var section=document.getElementById('historySection');
+  var list=document.getElementById('historyList');
+  if(!records.length){ section.style.display='none'; return; }
+  section.style.display='block';
+  var payNames={ wechat:'微信', alipay:'支付宝', cash:'现金', card:'刷卡' };
+  records.sort(function(a,b){ return b.id.localeCompare(a.id); });
+  var h='';
+  records.forEach(function(r){
+    h+='<div class="hist-item">'+
+      '<div class="hi-meta">'+
+        '<div class="hi-table">'+r.tableName+'</div>'+
+        '<div class="hi-time">'+r.time+' · '+(r.items?r.items.length+'道菜':'')+'</div>'+
+      '</div>'+
+      '<div>'+
+        '<div class="hi-amt">+¥'+fmt2(r.amount)+'</div>'+
+        '<div class="hi-pay">'+(payNames[r.payMethod]||r.payMethod||'')+'</div>'+
+      '</div>'+
+    '</div>';
+  });
+  list.innerHTML=h;
+}
+
+// ═══════════ 桌台管理 ═══════════
+function openTableMgr(){
+  renderTableList();
+  document.getElementById('tableMgrMask').classList.add('show');
+  document.getElementById('tableMgrDrawer').style.transform='translateX(-50%) translateY(0)';
+}
+function closeTableMgr(){
+  document.getElementById('tableMgrMask').classList.remove('show');
+  document.getElementById('tableMgrDrawer').style.transform='translateX(-50%) translateY(120%)';
+}
+function renderTableList(){
+  var tables=getTables();
+  var h='';
+  tables.forEach(function(t){
+    h+='<div class="tl-item">'+
+      '<span class="tl-name" id="tln_'+t.id+'">'+(t.name||t.id)+(t.status==='open'?' (开台)':'')+'</span>'+
+      '<button class="tl-edit" onclick="startRenameTable(\''+t.id+'\')">✎</button>'+
+      '<button class="tl-del" onclick="deleteTable(\''+t.id+'\')">'+(t.status==='open'?'':'×')+'</button>'+
+    '</div>';
+  });
+  document.getElementById('tableList').innerHTML=h||'<div style="color:var(--text-m);font-size:var(--fs-14);padding:8px 0;">暂无桌台</div>';
+}
+function addTable(){
+  var inp=document.getElementById('newTableName');
+  var name=inp.value.trim();
+  if(!name){ toast('请输入桌台名称',false); return; }
+  var tables=getTables();
+  var id='t'+Date.now();
+  tables.push({ id:id, name:name, order:[], status:'empty', openAt:null });
+  saveTables(tables);
+  inp.value='';
+  renderTableList();
+  renderTableGrid();
+  toast('已添加 '+name,true);
+}
+function deleteTable(id){
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===id;});
+  if(t&&t.status==='open'){ toast('开台中的桌台无法删除',false); return; }
+  if(!confirm('确定删除？')) return;
+  saveTables(tables.filter(function(x){return x.id!==id;}));
+  if(selectedTable===id) selectedTable=null;
+  renderTableList();
+  renderTableGrid();
+  renderMenu();
+  updateOrderBar();
+}
+
+function startRenameTable(id){
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===id;});
+  if(!t) return;
+  var el=document.getElementById('tln_'+id);
+  if(!el) return;
+  var oldName=t.name||id;
+  el.innerHTML='<input class="tl-inline-input" id="tlinput_'+id+'" value="'+oldName.replace(/"/g,'&quot;')+'" onblur="finishRenameTable(\''+id+'\')" onkeydown="if(event.key===\'Enter\')finishRenameTable(\''+id+'\')">';
+  var inp=document.getElementById('tlinput_'+id);
+  inp.focus(); inp.select();
+}
+
+function finishRenameTable(id){
+  var inp=document.getElementById('tlinput_'+id);
+  var newName=inp?inp.value.trim():'';
+  if(!newName) return renderTableList();
+  var tables=getTables();
+  var t=tables.find(function(x){return x.id===id;});
+  if(!t) return;
+  t.name=newName;
+  saveTables(tables);
+  renderTableList();
+  renderTableGrid();
+  if(selectedTable===id){
+    var drawerTitle=document.getElementById('drawerTitle');
+    if(drawerTitle) drawerTitle.textContent=newName+'  当前订单';
+  }
+}
+
+// ═══════════ 初始化 ═══════════
+document.addEventListener('DOMContentLoaded', function(){
+  try{ initDefaultTables(); }catch(e){ console.log('initTables err:',e); }
+  try{ updateRoleUI(); }catch(e){ console.log('updateRoleUI err:',e); }
+  try{ renderBottomNav('caidan'); }catch(e){ console.log('renderBottomNav err:',e); }
+  try{ renderTableGrid(); }catch(e){ console.log('renderTableGrid err:',e); }
+  try{ renderHistory(); }catch(e){ console.log('renderHistory err:',e); }
+  try{ updateNotifBell(); }catch(e){ console.log('updateNotifBell err:',e); }
+  // 初始化套餐/单品模式
+  try{ if(getShopType()==='taocan'){ dishMode='taocan'; } else { dishMode='single'; } }catch(e){}
+  // 初始菜单占位
+  try{ document.getElementById('menuCatBar')&&(document.getElementById('menuCatBar').innerHTML=''); }catch(e){}
+  try{ document.getElementById('menuList')&&(document.getElementById('menuList').innerHTML='<div class="no-menu"><div class="nm-icon">🍜</div><div>请先选择桌台开始点菜</div></div>'); }catch(e){}
+  try{ document.getElementById('menuSearchBar')&&(document.getElementById('menuSearchBar').style.display='none'); }catch(e){}
+  // 定时刷新桌台时长
+  setInterval(function(){
+    if(selectedTable) renderTableGrid();
+  }, 30000);
+});
+</script>
+</body>
+</html>
