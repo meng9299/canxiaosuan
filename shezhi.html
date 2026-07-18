@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>餐小算 · 我的</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  /* ── 字体缩放变量 (小/中/大) ── */
+  --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+  --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+  --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px; --fs-26:26px;
+  --fs-28:28px; --fs-30:30px; --fs-36:36px;
+
+  --brand:#534AB7; --brand-light:#EEEDFE; --brand-mid:#7F77DD;
+  --bg:#f5f5f3; --white:#fff; --text:#1a1a1a;
+  --text-s:#555; --text-m:#777; --border:rgba(0,0,0,0.08);
+  --radius:14px; --green:#27ae60; --red:#e74c3c; --orange:#f39c12;
+}
+ body {font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); max-width:420px; margin:0 auto; padding-bottom:90px;min-height:100vh; }
+
+.topbar { display:flex; align-items:center; padding:14px 16px; background:var(--white); position:sticky; top:0; z-index:20; gap:10px; border-bottom:1px solid var(--border); }
+.tb-title { font-size:var(--fs-16); font-weight:700; flex:1; }
+.tb-notif { font-size:var(--fs-20); cursor:pointer; position:relative; }
+.tb-notif sup { font-size:var(--fs-14); background:var(--red); color:#fff; padding:1px 5px; border-radius:8px; position:relative; top:-6px; }
+
+/* 用户信息卡 */
+.user-card {
+  background:var(--white); border-radius:var(--radius); padding:16px;
+  margin:12px 16px; display:flex; align-items:center; gap:12px;
+}
+.uc-avatar {
+  width:48px; height:48px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-size:var(--fs-24); flex-shrink:0;
+}
+.uc-avatar.boss{background:#fff3e0}
+.uc-avatar.manager{background:#e3f2fd}
+.uc-avatar.buyer{background:#e8f5e9}
+.uc-avatar.keeper{background:#fce4ec}
+.uc-avatar.waiter{background:#f3e5f5}
+.uc-info{flex:1}
+.uc-name{font-size:var(--fs-16);font-weight:700}
+.uc-role{font-size:var(--fs-14);color:var(--brand-mid);margin-top:2px}
+.uc-switch{font-size:var(--fs-14);color:var(--brand);cursor:pointer}
+
+/* section */
+.section{ margin:16px 16px 8px; }
+.sec-title{ font-size:var(--fs-15); font-weight:600; color:var(--text-s); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+.sec-add{ font-size:var(--fs-14); color:var(--brand); cursor:pointer; }
+
+/* 团队成员列表 */
+.member-card{
+  background:var(--white); border-radius:var(--radius); padding:12px 14px;
+  margin-bottom:8px; display:flex; align-items:center; gap:10px; cursor:pointer;
+  border:1.5px solid transparent; transition:all .15s;
+}
+.member-card:hover{ border-color:var(--brand-mid); }
+.member-card.selected{ border-color:var(--brand); background:var(--brand-light); }
+.mc-avatar{
+  width:38px; height:38px; border-radius:50%; display:flex;
+  align-items:center; justify-content:center; font-size:var(--fs-20); flex-shrink:0;
+}
+.mc-info{ flex:1; min-width:0; }
+.mc-name{ font-size:var(--fs-14); font-weight:600; }
+.mc-detail{ font-size:var(--fs-15); color:var(--text-m); margin-top:1px; }
+.mc-arrow{ color:var(--text-m); font-size:var(--fs-16); }
+
+/* 弹窗 - 添加/编辑成员 */
+.modal-mask{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:center; justify-content:center; }
+.modal-mask.show{ display:flex; }
+.modal-box{ background:var(--white); border-radius:18px; width:88%; max-width:360px; overflow:hidden; }
+.modal-head{ padding:16px 18px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+.modal-head .mh-title{ font-size:var(--fs-16); font-weight:700; }
+.modal-head .mh-close{ font-size:var(--fs-22); cursor:pointer; color:var(--text-m); }
+.modal-body{ padding:16px 18px; max-height:65vh; overflow-y:auto; }
+.modal-footer{ padding:12px 18px 16px; display:flex; gap:10px; }
+.modal-footer button{ flex:1; padding:11px; border:none; border-radius:12px; font-size:var(--fs-14); font-weight:600; cursor:pointer; font-family:inherit; }
+.btn-cancel{ background:var(--bg); color:var(--text-s); }
+.btn-save{ background:var(--brand); color:#fff; }
+.btn-del{ background:#fde8e8; color:var(--red); }
+
+.form-group{ margin-bottom:14px; }
+.form-group label{ display:block; font-size:var(--fs-14); color:var(--text-s); font-weight:600; margin-bottom:5px; }
+.form-group input, .form-group select{
+  width:100%; padding:10px 12px; border:1px solid var(--border);
+  border-radius:10px; font-size:var(--fs-14); font-family:inherit; background:#fafafa;
+}
+.form-group input:focus, .form-group select:focus{ outline:none; border-color:var(--brand); }
+
+/* 权限项 */
+.perm-group{ margin-bottom:12px; }
+.perm-group .pg-label{ font-size:var(--fs-14); color:var(--text-s); margin-bottom:6px; }
+.perm-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 0; border-bottom:1px solid var(--border);
+}
+.perm-row .pr-name{ font-size:var(--fs-15); font-weight:600; }
+.perm-row .pr-desc{ font-size:var(--fs-15); color:var(--text-m); }
+
+/* 开关 */
+.toggle{ position:relative; width:42px; height:24px; flex-shrink:0; }
+.toggle input{ display:none; }
+.toggle .slider{
+  position:absolute; inset:0; background:#c8c8c8; border-radius:24px;
+  border:1px solid #bbb; transition:.25s; cursor:pointer;
+}
+.toggle .slider::before{
+  content:''; position:absolute; top:2px; left:2px;
+  width:20px; height:20px; border-radius:50%;
+  background:#fff; transition:.25s; box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+.toggle input:checked+.slider{ background:var(--brand); }
+.toggle input:checked+.slider::before{ transform:translateX(18px); }
+
+/* 权限选项组（采购员 editor/viewer） */
+.perm-options{ display:flex; gap:6px; }
+.perm-opt{
+  padding:5px 14px; border-radius:16px; border:1.5px solid var(--border);
+  font-size:var(--fs-14); cursor:pointer; transition:all .15s;
+}
+.perm-opt.active{ border-color:var(--brand); background:var(--brand-light); color:var(--brand); font-weight:600; }
+
+/* 采购流程入口卡片 */
+.flow-entry{
+  background:var(--white); border-radius:var(--radius); padding:13px 14px;
+  display:flex; align-items:center; justify-content:space-between; cursor:pointer;
+  margin-bottom:8px;
+}
+.flow-entry .fe-left{ flex:1; min-width:0; }
+.flow-entry .fe-title{ font-size:var(--fs-14); font-weight:600; }
+.flow-entry .fe-summary{ font-size:var(--fs-15); color:var(--text-m); margin-top:2px; }
+.flow-entry .fe-arrow{ color:var(--text-m); font-size:var(--fs-16); flex-shrink:0; }
+
+/* 采购流程弹窗内 */
+.flow-modal-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 0; border-bottom:1px solid var(--border);
+}
+.flow-modal-row:last-child{ border-bottom:none; }
+.flow-modal-row .fm-left{ flex:1; min-width:0; padding-right:12px; }
+.flow-modal-row .fm-title{ font-size:var(--fs-14); font-weight:600; }
+.flow-modal-row .fm-desc{ font-size:var(--fs-15); color:var(--text-m); margin-top:3px; line-height:1.5; }
+.flow-modal-tip{ font-size:var(--fs-15); color:var(--text-m); padding:12px 0 0; line-height:1.6; }
+
+/* 数据管理区 */
+.data-card{
+  background:var(--white); border-radius:var(--radius); overflow:hidden; margin-bottom:8px;
+}
+.data-item{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 14px; border-bottom:1px solid var(--border); cursor:pointer; font-size:var(--fs-14);
+}
+.data-item:last-child{ border-bottom:none; }
+.data-item .di-icon{ margin-right:8px; }
+.data-item .di-arrow{ color:var(--text-m); font-size:var(--fs-14); }
+.data-item .di-body{ flex:1; min-width:0; }
+.data-item .di-title{ font-weight:500; }
+.data-item .di-sub{ font-size:11px; color:#999; margin-top:2px; line-height:1.3; }
+.data-item.di-center .di-body{ text-align:center; }
+/* 美团销售导入弹窗 */
+.mt-mask{ position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60; display:none; }
+.mt-mask.show{ display:block; }
+.mt-panel{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:92%; max-width:440px; max-height:86%; overflow:auto; background:#fff; border-radius:16px; padding:18px; box-sizing:border-box; }
+.mt-title{ font-size:16px; font-weight:700; margin-bottom:4px; }
+.mt-tip{ font-size:12px; color:#888; margin-bottom:12px; line-height:1.4; }
+.mt-file{ display:block; width:100%; padding:14px; border:1.5px dashed var(--border); border-radius:12px; text-align:center; color:var(--brand); font-weight:600; cursor:pointer; box-sizing:border-box; }
+.mt-prev{ margin-top:12px; max-height:200px; overflow:auto; }
+.mt-prev table{ width:100%; border-collapse:collapse; font-size:12px; }
+.mt-prev th,.mt-prev td{ border:1px solid #eee; padding:5px 6px; text-align:left; }
+.mt-prev th{ background:#f7f7f9; position:sticky; top:0; }
+.mt-map{ margin-top:12px; }
+.mt-map-row{ display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; }
+.mt-map-row select{ flex:1; padding:6px; border:1px solid var(--border); border-radius:8px; font-family:inherit; }
+.mt-actions{ display:flex; gap:10px; margin-top:16px; }
+.mt-actions button{ flex:1; padding:11px; border:none; border-radius:10px; font-weight:600; font-family:inherit; cursor:pointer; }
+.mt-btn-ok{ background:var(--brand); color:#fff; }
+.mt-btn-cancel{ background:#f0f0f2; color:#555; }
+.mt-close{ float:right; font-size:22px; color:#999; cursor:pointer; line-height:1; }
+.mt-empty{ text-align:center; color:#aaa; padding:24px 0; }
+
+/* 通知抽屉 */
+.drawer-mask{ position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:30; display:none; }
+.drawer-mask.show{ display:block; }
+.drawer{
+  position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px;
+  background:var(--white); border-radius:18px 18px 0 0; z-index:31; max-height:75vh;
+  display:flex; flex-direction:column; transform:translateX(-50%) translateY(120%); transition:transform .25s;
+}
+.drawer-handle{ width:36px; height:4px; background:var(--border); border-radius:2px; margin:10px auto 6px; flex-shrink:0; }
+.drawer-title{
+  padding:0 18px 12px; display:flex; align-items:center; justify-content:space-between;
+  flex-shrink:0; border-bottom:1px solid var(--border);
+}
+.drawer-title .dt-name{ font-size:var(--fs-16); font-weight:700; }
+.drawer-title .dt-close{ font-size:var(--fs-22); cursor:pointer; color:var(--text-m); }
+.drawer-body{ overflow-y:auto; flex:1; padding:8px 0; }
+.notif-item{
+  padding:12px 18px; border-bottom:1px solid var(--border); cursor:pointer;
+}
+.notif-item.unread{ background:var(--brand-light); }
+.notif-item .ni-title{ font-size:var(--fs-14); font-weight:600; }
+.notif-item .ni-msg{ font-size:var(--fs-14); color:var(--text-s); margin-top:3px; }
+.notif-item .ni-time{ font-size:var(--fs-14); color:var(--text-m); margin-top:4px; }
+.drawer-footer{padding:10px 18px 16px; border-top:1px solid var(--border); flex-shrink:0; text-align:center;}
+.drawer-footer button{background:none;border:none;color:var(--text-s);font-size:var(--fs-15);cursor:pointer;font-family:inherit;}
+
+/* 底部导航 */
+.bottom-nav{ position:fixed; bottom:0; left:50%; -webkit-transform:translateX(-50%); transform:translateX(-50%); width:100%; max-width:420px; background:var(--white); border-top:1px solid var(--border); display:flex; padding-bottom: env(safe-area-inset-bottom, 4px); z-index: 50; }
+.nav-item{font-weight:600; flex:1; text-align:center; padding:8px 0 6px; font-size:var(--fs-15); color:var(--text-m); cursor:pointer; text-decoration:none; }
+.nav-item.active{ color:var(--brand); font-weight:600; }
+.nav-item .n-icon{ font-size:var(--fs-20); display:block; margin-bottom:2px; }
+.pwd-form{ display:flex; flex-direction:column; gap:10px; padding:6px 0; }
+.pwd-input{ width:100%; box-sizing:border-box; padding:11px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:var(--fs-15); font-family:inherit; background:var(--white); }
+.pwd-input:focus{ outline:none; border-color:var(--brand); }
+.pwd-btn{ width:100%; padding:12px; background:var(--brand); color:#fff; border:none; border-radius:10px; font-size:var(--fs-15); font-weight:600; cursor:pointer; font-family:inherit; }
+.pwd-toggle-btn{ width:100%; padding:12px; background:var(--brand-light); color:var(--brand); border:1px solid var(--brand-mid); border-radius:10px; font-size:var(--fs-15); font-weight:600; cursor:pointer; font-family:inherit; }
+.pwd-btn-cancel{ width:100%; padding:12px; background:var(--bg); color:var(--text-s); border:none; border-radius:10px; font-size:var(--fs-15); cursor:pointer; font-family:inherit; margin-top:4px; }
+.pwd-wrap{ position:relative; }
+.pwd-wrap input{ padding-right:42px; }
+.pwd-eye{ position:absolute; right:12px; top:50%; transform:translateY(-50%); cursor:pointer; font-size:var(--fs-15); opacity:0.55; user-select:none; }
+.pwd-eye:active{ opacity:1; }
+/* 学习加油站入口（标题行右侧） */
+.study-entry{ font-size:var(--fs-13); font-weight:600; color:var(--brand); background:var(--brand-light); border:none; border-radius:16px; padding:6px 12px; cursor:pointer; font-family:inherit; }
+.study-entry:active{ opacity:.7; }
+/* 弹窗内知识库 */
+.sh-list{ display:flex; flex-direction:column; gap:10px; }
+.sh-item{ background:var(--bg); border-radius:12px; padding:12px 14px; }
+.sh-item-title{ font-size:var(--fs-14); font-weight:700; color:var(--text-s); margin-bottom:4px; }
+.sh-item-body{ font-size:var(--fs-13); color:var(--text-m); line-height:1.6; }
+</style>
+
+<script>
+// Polyfill
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+  <span class="tb-title">👤 我的</span>
+  <button class="study-entry" onclick="openStudyHub()">📚 学习加油站</button>
+</div>
+
+<div class="user-card">
+  <div class="uc-avatar" id="ucAvatar">👤</div>
+  <div class="uc-info">
+    <div class="uc-name" id="ucName">用户</div>
+    <div class="uc-role" id="ucRole">角色</div>
+  </div>
+  <div class="uc-switch" onclick="switchToLogin()">切换</div>
+</div>
+
+<!-- 修改密码（所有登录角色可用，默认收起，点击才弹窗） -->
+<div class="section">
+  <div class="sec-title">🔑 修改密码</div>
+  <button class="pwd-toggle-btn" onclick="openPwdModal()">✏️ 修改登录密码</button>
+</div>
+<!-- 修改密码弹窗（默认隐藏） -->
+<div class="modal-mask" id="pwdModal" onclick="if(event.target===this)closePwdModal()">
+  <div class="modal-box" style="padding:20px 18px;">
+    <div class="sec-title" style="justify-content:center;margin-bottom:14px;">🔑 修改密码</div>
+    <div class="pwd-form">
+      <input type="password" id="oldPwd" class="pwd-input" placeholder="原密码">
+      <input type="password" id="newPwd" class="pwd-input" placeholder="新密码（至少4位）">
+      <input type="password" id="confirmPwd" class="pwd-input" placeholder="确认新密码">
+      <button class="pwd-btn" onclick="changeMyPwd()">保存新密码</button>
+      <button class="pwd-btn-cancel" onclick="closePwdModal()">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- 团队成员管理（仅老板可见） -->
+<div class="section" id="teamSection" style="display:none;">
+  <div class="sec-title">
+    👥 团队成员
+    <span class="sec-add" onclick="openMemberModal()">+ 添加</span>
+  </div>
+  <div id="memberList"></div>
+</div>
+
+<!-- 采购流程设置入口（仅老板可见） -->
+<div class="section" id="flowSection" style="display:none;">
+  <div class="sec-title">⚙️ 采购流程设置</div>
+  <div class="flow-entry" onclick="openFlowModal()">
+    <div class="fe-left">
+      <div class="fe-title">采购审核流程</div>
+      <div class="fe-summary" id="flowSummary">-</div>
+    </div>
+    <span class="fe-arrow">›</span>
+  </div>
+</div>
+
+<!-- 菜谱管理（一行，点击弹窗） -->
+<div class="section">
+  <div class="data-card">
+    <div class="data-item" onclick="openRecipeMgr()">
+      <span class="di-icon">🍽️</span>
+      <div class="di-body"><div class="di-title">菜谱管理</div></div>
+      <span class="di-arrow">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- 桌台管理（一行，点击弹窗） -->
+<div class="section">
+  <div class="data-card">
+    <div class="data-item" onclick="openTableMgrShezhi()">
+      <span class="di-icon">🪑</span>
+      <div class="di-body"><div class="di-title">桌台管理</div></div>
+      <span class="di-arrow">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- 消息管理（一行，与桌台管理并列，最右侧直接放开关控制铃铛提醒） -->
+<div class="section">
+  <div class="data-card">
+    <div class="data-item" style="cursor:default;">
+      <span class="di-icon">🔔</span>
+      <div class="di-body"><div class="di-title">消息管理</div></div>
+      <label class="toggle"><input type="checkbox" id="msgEnabledToggle" onchange="toggleNotifEnabled(this)"><span class="slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<!-- AI助手（一行，与消息管理并列，最右侧直接放开关控制悬浮图标） -->
+<div class="section">
+  <div class="data-card">
+    <div class="data-item" style="cursor:default;">
+      <span class="di-icon">🤖</span>
+      <div class="di-body"><div class="di-title">AI助手</div></div>
+      <label class="toggle"><input type="checkbox" id="aiFabToggleShezhi" onchange="toggleAiFabEnabled(this)"><span class="slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<!-- 数据管理（可折叠） -->
+<div class="section" id="secDataMgmt">
+  <div class="sec-title" onclick="toggleDataMgmt()" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+    <span>📋 数据管理</span>
+    <span id="dmArrow" style="transition:transform .2s;font-size:var(--fs-14);color:var(--text-m);">▸</span>
+  </div>
+  <div id="dmBody" style="display:none;">
+    <div class="data-card">
+      <div class="data-item di-center" onclick="exportData()">
+        <span class="di-icon">📤</span>
+        <div class="di-body"><div class="di-title">导出营业数据</div><div class="di-sub">订单·菜品·库存·记账·采购 全套数据</div></div>
+        <span class="di-arrow">›</span>
+      </div>
+      <div class="data-item di-center" onclick="importData()">
+        <span class="di-icon">📥</span>
+        <div class="di-body"><div class="di-title">导入营业数据</div><div class="di-sub">订单·菜品·库存·记账·采购 等数据</div></div>
+        <span class="di-arrow">›</span>
+      </div>
+      <div class="data-item di-center" onclick="openMeituanImport()">
+        <span class="di-icon">🥡</span>
+        <div class="di-body"><div class="di-title">导入销售数据</div><div class="di-sub">上传美团、饿了么等平台的销售数据 CSV（外卖订单）</div></div>
+        <span class="di-arrow">›</span>
+      </div>
+      <div class="data-item di-center" onclick="viewMeituanSales()">
+        <span class="di-icon">👁️</span>
+        <div class="di-body"><div class="di-title">查看已导入销售数据</div><div class="di-sub">查看已上传的外卖销售记录</div></div>
+        <span class="di-arrow">›</span>
+      </div>
+      <div class="data-item" onclick="requestClearData('purchase')"><span class="di-icon">🧹</span> 清空采购订单（保留商品）<span class="di-arrow" style="color:var(--red);">›</span></div>
+      <div class="data-item" onclick="requestClearData('all')"><span class="di-icon">🗑️</span> 清空所有数据<span class="di-arrow" style="color:var(--red);">›</span></div>
+    </div>
+  </div>
+
+  <!-- 清空数据·密码确认弹窗 -->
+  <div class="modal-mask" id="clearPwdModal" onclick="if(event.target===this)cancelClearPwd()">
+    <div class="modal-box" style="padding:20px 18px; max-width:340px;">
+      <div class="sec-title" style="justify-content:center;margin-bottom:6px;">🔐 安全验证</div>
+      <div style="font-size:13px;color:#666;text-align:center;margin-bottom:12px;line-height:1.5;">删除 <b id="clearPwdTitle" style="color:var(--red);">数据</b> 需输入当前登录密码确认</div>
+      <div class="pwd-form">
+        <input type="password" id="clearPwdInput" class="pwd-input" placeholder="请输入登录密码" onkeydown="if(event.key==='Enter')confirmClearWithPwd()">
+        <button class="pwd-btn" onclick="confirmClearWithPwd()">确认删除</button>
+        <button class="pwd-btn-cancel" onclick="cancelClearPwd()">取消</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── 学习加油站弹窗 ── -->
+<div class="modal-mask" id="studyHubModal" onclick="if(event.target===this)closeStudyHub()">
+  <div class="modal-box" style="padding:20px 18px; max-width:360px; max-height:82vh; overflow:auto;">
+    <div class="sec-title" style="justify-content:center;margin-bottom:4px;">📚 学习加油站</div>
+    <div style="font-size:12px;color:var(--text-m);text-align:center;margin-bottom:14px;">餐饮经营知识库 · 持续更新</div>
+    <div class="sh-list">
+      <div class="sh-item">
+        <div class="sh-item-title">🍽️ 菜品毛利怎么算</div>
+        <div class="sh-item-body">毛利 = 售价 − 食材成本；毛利率 = 毛利 ÷ 售价。快餐毛利 55%~65% 较健康，长期低于 50% 要警惕。</div>
+      </div>
+      <div class="sh-item">
+        <div class="sh-item-title">💰 成本控制三板斧</div>
+        <div class="sh-item-body">① 按历史销量精准采购，减少损耗；② 标准配方锁住每道菜用量；③ 定期盘点，库存价值一目了然。</div>
+      </div>
+      <div class="sh-item">
+        <div class="sh-item-title">📣 引流促销小技巧</div>
+        <div class="sh-item-body">新客用「满减 / 第二份半价」拉复购；闲时用「特价时段」填座位；老客用「会员日」锁忠诚。</div>
+      </div>
+      <div class="sh-item">
+        <div class="sh-item-title">📊 看懂经营报表</div>
+        <div class="sh-item-body">重点盯三数：利润率（赚不赚）、成本率（花多少）、当前库存价值（压了多少钱在货上）；趋势图看淡旺季。</div>
+      </div>
+    </div>
+    <button class="pwd-btn-cancel" onclick="closeStudyHub()" style="margin-top:14px;">关闭</button>
+  </div>
+</div>
+
+<!-- 店铺信息 -->
+<div class="section">
+  <div class="sec-title">🏪 店铺信息</div>
+  <div class="data-card">
+    <div class="data-item" onclick="editShopInfo()">
+      <span>店名：<span id="shopNameDisplay">-</span></span>
+      <span class="di-arrow">›</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── 添加/编辑成员弹窗 ── -->
+<div class="modal-mask" id="memberModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="mh-title" id="memberModalTitle">添加成员</span>
+      <span class="mh-close" onclick="closeMemberModal()">×</span>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>姓名</label>
+        <input type="text" id="mbrName" placeholder="如：张三">
+      </div>
+      <div class="form-group">
+        <label>角色</label>
+        <select id="mbrRole" onchange="onRoleChange()">
+          <option value="manager">🏪 店长</option>
+          <option value="chef">👨‍🍳 厨师长</option>
+          <option value="buyer">🛒 采购员</option>
+          <option value="keeper">📦 仓管</option>
+          <option value="waiter">🍽️ 点菜员</option>
+        </select>
+      </div>
+      <div class="form-group" id="mbrCustomNameWrap" style="display:none;">
+        <label>自定义角色名</label>
+        <input type="text" id="mbrCustomName" placeholder="如：副厨 / 夜班主管">
+      </div>
+      <div class="form-group">
+        <label>登录密码</label>
+        <div class="pwd-wrap">
+          <input type="password" id="mbrPwd" placeholder="设置登录密码（添加时必填）">
+          <span class="pwd-eye" onclick="togglePwd('mbrPwd', this)">👁️</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>确认密码</label>
+        <div class="pwd-wrap">
+          <input type="password" id="mbrPwd2" placeholder="再次输入密码">
+          <span class="pwd-eye" onclick="togglePwd('mbrPwd2', this)">👁️</span>
+        </div>
+      </div>
+      <div id="mbrPerms"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-del" id="btnDelMbr" onclick="deleteMember()" style="display:none;">删除</button>
+      <button class="btn-cancel" onclick="closeMemberModal()">取消</button>
+      <button class="btn-save" onclick="saveMember()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── 采购流程设置弹窗 ── -->
+<div class="modal-mask" id="flowModal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="mh-title">⚙️ 采购流程设置</span>
+      <span class="mh-close" onclick="closeFlowModal()">×</span>
+    </div>
+    <div class="modal-body">
+      <div class="flow-modal-row">
+        <div class="fm-left">
+          <div class="fm-title">① 厨师长审核</div>
+          <div class="fm-desc">仓管发起采购单后，需厨师长审核修改再发采购</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="flowChefReview" onchange="onFlowChange()"><span class="slider"></span></label>
+      </div>
+      <div class="flow-modal-row">
+        <div class="fm-left">
+          <div class="fm-title">② 老板审批</div>
+          <div class="fm-desc">厨师长通过后，还需老板最终审批（大额采购建议开启）</div>
+        </div>
+        <label class="toggle"><input type="checkbox" id="flowBossReview" onchange="onFlowChange()"><span class="slider"></span></label>
+      </div>
+      <div class="flow-modal-tip">
+        💡 流程：仓管发起 → (厨师长审核) → (老板审批) → 采购员采买 → 仓管验收入库<br>
+        括号内的环节可由开关控制，关掉则跳过
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-save" onclick="closeFlowModal()" style="flex:1;">完成</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- 版本号（由 gongxiang.js 自动填充 APP_VERSION） -->
+<div class="app-ver-bar" style="text-align:center;color:var(--text-m);font-size:var(--fs-11);padding:10px 0 4px;letter-spacing:.5px;">餐小算 <span id="appVer">v1.0.0</span></div>
+
+<!-- 底部导航 -->
+<div class="bottom-nav" id="bottomNav"></div>
+
+<!-- Toast -->
+<div class="toast" id="toast" style=""position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:10px 24px;border-radius:20px;font-size:var(--fs-15);z-index:100;opacity:0;transition:opacity .3s;""></div>
+
+<script>
+// ═══════════ Polyfill + 共享模块兜底（gongxiang.js 加载失败时启用） ═══════════
+if(!Array.prototype.find){Array.prototype.find=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return this[i];}return undefined;};}
+if(!String.prototype.padStart){String.prototype.padStart=function(len,str){str=str||' ';var s=String(this);while(s.length<len){s=str+s;}return s.slice(0,len);};}
+(function(){
+  if(!window.loadJSON)window.loadJSON=function(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):[];}catch(e){return[];}};
+  if(!window.saveJSON)window.saveJSON=function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}};
+  if(!window.todayStr)window.todayStr=function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  if(!window.pad)window.pad=function(n){return String(n).padStart(2,'0');};
+  if(!window.fmt0)window.fmt0=function(n){return Number(n||0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');};
+  if(!window.fmt2)window.fmt2=function(n){return Number(n||0).toFixed(2);};
+  if(!window.getUsers)window.getUsers=function(){return loadJSON('sxs_users')||[];};
+  if(!window.saveUsers)window.saveUsers=function(v){saveJSON('sxs_users',v);};
+  if(!window.getCurrentUserId)window.getCurrentUserId=function(){
+    var id=localStorage.getItem('sxs_current_user');
+    if(!id){
+      var users=getUsers();
+      if(!users.length){
+        var boss={id:'u_boss_001',name:'老板',role:'boss',active:true,createdAt:todayStr()};
+        saveUsers([boss]);
+        id=boss.id;
+      }else{
+        var b=null;
+        for(var i=0;i<users.length;i++){if(users[i].role==='boss'){b=users[i];break;}}
+        id=b?b.id:users[0].id;
+      }
+      localStorage.setItem('sxs_current_user',id);
+    }
+    return id;
+  };
+  if(!window.getCurrentUser)window.getCurrentUser=function(){var id=getCurrentUserId();var users=getUsers();for(var i=0;i<users.length;i++){if(users[i].id===id)return users[i];}return null;};
+  if(!window.getUserPerms)window.getUserPerms=function(){
+    var u=getCurrentUser();
+    if(!u)return{};
+    if(u.role==='boss')return{baobiao:true,caidan:true,caigou:'editor',kucun:true,shezhi:true,jizhang:true};
+    if(u.role==='chef')return{baobiao:true,chef_review:true,caigou:'editor',jizhang:true};
+    if(u.role==='manager')return{baobiao:true,caigou:'editor',kucun:true,jizhang:true};
+    if(u.role==='buyer')return{caigou:'editor',jizhang:true,kucun:true};
+    if(u.role==='keeper')return{kucun:true,jizhang:true,caigou:'editor'};
+    if(u.role==='waiter')return{caidan:true};
+    return u.perms||{};
+  };
+  if(!window.userUrl)window.userUrl=function(path){var sep=path.indexOf('?')>=0?'&':'?';return path+sep+'uid='+encodeURIComponent(getCurrentUserId());};
+  if(!window.renderBottomNav)window.renderBottomNav=function(activeKey){
+    var perms=getUserPerms();
+    var tabs=[];
+    if(perms.baobiao)tabs.push({key:'baobiao',icon:'📊',label:'报表',href:'catering.html'});
+    if(perms.caidan){
+      tabs.push({key:'caidan',icon:'🍽️',label:'菜品管理',href:'menu_new.html'});
+    }
+    if(perms.caigou)tabs.push({key:'caigou',icon:'🛒',label:'采购',href:'caigou.html'});
+    if(perms.kucun)tabs.push({key:'kucun',icon:'📦',label:'库存',href:'kucun.html'});
+    if(perms.jizhang)tabs.push({key:'jizhang',icon:'📒',label:'记账',href:'jizhang.html'});
+    tabs.push({key:'shezhi',icon:'👤',label:'我的',href:'shezhi.html'});
+    var seen={},filtered=[];
+    tabs.forEach(function(t){if(!seen[t.key]){seen[t.key]=true;filtered.push(t);}});
+    var h='';
+    filtered.forEach(function(t){
+      var act=t.key===activeKey?' active':'';
+      h+='<a class="nav-item'+act+'" href="'+userUrl(t.href)+'">'+t.icon+'<span class="n-label">'+t.label+'</span></a>';
+    });
+    var nav=document.getElementById('bottomNav');
+    if(nav)nav.innerHTML=h;
+  };
+  if(!window.getPurchaseFlow)window.getPurchaseFlow=function(){return loadJSON('sxs_flow_config')||{chefReview:false,bossReview:false};};
+  if(!window.savePurchaseFlow)window.savePurchaseFlow=function(flow){saveJSON('sxs_flow_config',flow);};
+  if(!window.getJizhang)window.getJizhang=function(){var d=loadJSON('sxs_jizhang');return Array.isArray(d)?d:[];};
+  if(!window.addLog)window.addLog=function(){};
+  if(!window.updateNotifBell)window.updateNotifBell=function(){};
+  if(!window.getNotificationCount)window.getNotificationCount=function(){return 0;};
+  if(!window.getCustomCatLabel)window.getCustomCatLabel=function(id){return id;};
+  if(!window.getCustomIncomeCatLabel)window.getCustomIncomeCatLabel=function(id){return id;};
+  if(!window.switchRole)window.switchRole=function(){location.reload();};
+  if(!window.createTimeElement)window.createTimeElement=function(){return document.createElement('span');};
+  if(!window.toast)window.toast=function(msg){var el=document.getElementById('toast');if(el){el.textContent=msg;el.style.opacity='1';setTimeout(function(){el.style.opacity='0';},2000);}};
+})();
+</script>
+<script src="gongxiang.js?v=20260715g" onerror="console.warn('gongxiang.js not loaded, using fallback')"></script>
+<script>
+// ── 初始化 ──
+var editingUserId = null;
+
+// ⚠️ init 已移至文件末尾（脚本闭合标签之前）执行，确保 roleNames/renderMemberList 等定义就绪后再渲染
+
+function updateUserUI(){
+  var u = getCurrentUser();
+  if(!u) return;
+  var roleNames = { boss:'👔 老板', chef:'👨‍🍳 厨师长', manager:'🏪 店长', buyer:'🛒 采购员', keeper:'📦 仓管', waiter:'🍽️ 点菜员' };
+  document.getElementById('ucAvatar').className = 'uc-avatar '+u.role;
+  document.getElementById('ucAvatar').textContent = (roleNames[u.role]||'👤').slice(0,2);
+  document.getElementById('ucName').textContent = u.name;
+  document.getElementById('ucRole').textContent = roleNames[u.role] || '';
+  // 数据管理权限闸门：无权限则隐藏整个数据管理区
+  var dm = document.getElementById('secDataMgmt');
+  if(dm) dm.style.display = (typeof getUserPerms==='function' && getUserPerms().shuju) ? 'block' : 'none';
+}
+
+function switchToLogin(){
+  location.href = 'index.html';
+}
+
+// ═══════════ 团队成员管理 ═══════════
+var roleNames = { chef:'👨‍🍳 厨师长', manager:'🏪 店长', buyer:'🛒 采购员', keeper:'📦 仓管', waiter:'🍽️ 点菜员' };
+
+function renderMemberList(){
+  var users = getUsers().filter(function(u){return u.role!=='boss';});
+  var h='';
+  users.forEach(function(u){
+    var perms = u.perms || {};
+    var details = [];
+    if(u.role==='buyer') details.push('采购：'+(perms.caigou==='editor'?'可编辑':'仅查看'));
+    if(u.role==='waiter') details.push(perms.caidan_view_all?'看全部桌台':'只看自己');
+    if(perms.kucun) details.push('库存');
+    if(perms.jizhang) details.push('记账');
+    if(perms.baobiao) details.push('报表');
+    h += '<div class="member-card" onclick="openMemberModal(\''+u.id+'\')">'+
+      '<div class="mc-avatar '+u.role+'">'+(roleNames[u.role]||'👤').slice(0,2)+'</div>'+
+      '<div class="mc-info">'+
+        '<div class="mc-name">'+u.name+'</div>'+
+        '<div class="mc-detail">'+(getRoleName(u.role)||'')+' · '+(details.length?details.join(' / '):'无额外权限')+'</div>'+
+      '</div>'+
+      '<span class="mc-arrow">›</span>'+
+    '</div>';
+  });
+  document.getElementById('memberList').innerHTML = h || '<div style="font-size:var(--fs-15);color:var(--text-m);padding:12px 0;">还没有团队成员，点击右上角添加</div>';
+}
+
+function openMemberModal(userId){
+  editingUserId = userId||null;
+  buildRoleOptions();
+  document.getElementById('memberModal').classList.add('show');
+  document.getElementById('btnDelMbr').style.display = userId?'inline-block':'none';
+
+  if(userId){
+    document.getElementById('memberModalTitle').textContent = '编辑成员';
+    var u = getUsers().find(function(x){return x.id===userId;});
+    if(!u) return;
+    document.getElementById('mbrName').value = u.name;
+    document.getElementById('mbrRole').value = u.role;
+  } else {
+    document.getElementById('memberModalTitle').textContent = '添加成员';
+    document.getElementById('mbrName').value = '';
+    document.getElementById('mbrRole').value = 'waiter';
+  }
+  var pwdEl=document.getElementById('mbrPwd'); if(pwdEl){ pwdEl.value=''; pwdEl.placeholder = userId?'留空则不修改密码':'设置登录密码（必填）'; }
+  var pwdEl2=document.getElementById('mbrPwd2'); if(pwdEl2){ pwdEl2.value=''; }
+  onRoleChange();
+  // 如果有用户，回填权限
+  if(userId){
+    var u2 = getUsers().find(function(x){return x.id===userId;});
+    if(u2) fillPermsToForm(u2);
+  }
+}
+
+function closeMemberModal(){
+  document.getElementById('memberModal').classList.remove('show');
+  editingUserId = null;
+}
+
+// 密码框显示/隐藏切换（眼睛图标）
+function togglePwd(id, el){
+  var inp = document.getElementById(id);
+  if(!inp) return;
+  if(inp.type==='password'){ inp.type='text'; el.textContent='🙈'; }
+  else { inp.type='password'; el.textContent='👁️'; }
+}
+
+function onRoleChange(){
+  var role = document.getElementById('mbrRole').value;
+  var nameWrap = document.getElementById('mbrCustomNameWrap');
+  if(nameWrap) nameWrap.style.display = (role==='custom_new') ? 'block' : 'none';
+  var container = document.getElementById('mbrPerms');
+  if(role==='boss'){
+    container.innerHTML='<div style=\"font-size:var(--fs-14);color:var(--text-m);padding:12px 0;\">老板拥有全部权限，无需设置</div>';
+    return;
+  }
+  renderPermToggles(container);
+  // 选了已有自定义角色：用其模板预填权限
+  if(role.indexOf('cr::')===0){
+    var nm = role.slice(4);
+    var cr = getCustomRoles().find(function(c){ return c.name===nm; });
+    if(cr) fillPermsFromObj(cr.perms);
+  }
+}
+function renderPermToggles(container){
+  var navs = [
+    {key:'baobiao', icon:'📊', name:'报表', desc:'查看经营报表和分析'},
+    {key:'caidan', icon:'📋', name:'菜单', desc:'菜谱/套餐/桌台管理'},
+    {key:'caigou', icon:'🛒', name:'采购', desc:'采购单制作和确定入库'},
+    {key:'kucun', icon:'📦', name:'库存', desc:'库存查询和预警'},
+    {key:'jizhang', icon:'📒', name:'记账', desc:'收支记录'},
+    {key:'shuju', icon:'💾', name:'数据管理', desc:'导出/导入/清空数据'},
+    {key:'chef', icon:'👨‍🍳', name:'厨师长', desc:'厨房长工作台（审核订单 / 查看库存）'},
+  ];
+  var h='';
+  navs.forEach(function(n){
+    h+='<div class=\"perm-row\" style=\"border-bottom:1px solid var(--border);padding:10px 0;\">';
+    h+='<div style=\"flex:1;\"><div class=\"pr-name\" style=\"font-size:var(--fs-15);font-weight:600;\">'+n.icon+' '+n.name+'</div><div class=\"pr-desc\" style=\"font-size:var(--fs-13);color:var(--text-m);\">'+n.desc+'</div></div>';
+    h+='<label class=\"toggle\"><input type=\"checkbox\" id=\"perm_'+n.key+'\" data-key=\"'+n.key+'\" onchange=\"toggleSubPerms()\"><span class=\"slider\"></span></label>';
+    h+='</div>';
+    if(n.key==='caigou'){
+      h+='<div id=\"sub_caigou\" style=\"display:none;padding:0 0 8px 20px;\">';
+      h+=subToggle('caigou_edit_prod','编辑商品属性','可修改商品名称/分类/供应商/预警');
+      h+=subToggle('caigou_edit_qty','编辑数量','可修改采购数量');
+      h+=subToggle('caigou_add_prod','商品录入','可新增商品/一键录入');
+      h+='</div>';
+    }
+    if(n.key==='kucun'){
+      h+='<div id=\"sub_kucun\" style=\"display:none;padding:0 0 8px 20px;\">';
+      h+=subToggle('kucun_edit_qty','编辑数量','可修改库存数量');
+      h+='</div>';
+    }
+    if(n.key==='jizhang'){
+      h+='<div id=\"sub_jizhang\" style=\"display:none;padding:0 0 8px 20px;\">';
+      h+=subToggle('jizhang_edit','可编辑','可修改已有记账记录');
+      h+='</div>';
+    }
+  });
+  container.innerHTML=h;
+}
+function fillPermsFromObj(perms){
+  perms = perms||{};
+  ['baobiao','caidan','dingdan','caigou','kucun','jizhang','shuju'].forEach(function(k){
+    var el = document.getElementById('perm_'+k);
+    if(el) el.checked = perms[k]!==false;
+  });
+  var _ec=document.getElementById('perm_chef'); if(_ec) _ec.checked=!!perms.chef;
+  ['caigou_edit_prod','caigou_edit_qty','caigou_add_prod','kucun_edit_qty','jizhang_edit'].forEach(function(k){
+    var el = document.getElementById('perm_'+k);
+    if(el) el.checked = !!perms[k];
+  });
+  toggleSubPerms();
+}
+function buildRoleOptions(){
+  var sel = document.getElementById('mbrRole');
+  if(!sel) return;
+  var fixed = [
+    {v:'manager', t:'🏪 店长'},
+    {v:'chef', t:'👨‍🍳 厨师长'},
+    {v:'buyer', t:'🛒 采购员'},
+    {v:'keeper', t:'📦 仓管'},
+    {v:'waiter', t:'🍽️ 点菜员'}
+  ];
+  var h='';
+  fixed.forEach(function(o){ h+='<option value="'+o.v+'">'+o.t+'</option>'; });
+  var crs = getCustomRoles();
+  crs.forEach(function(c){ h+='<option value="cr::'+c.name+'">👤 '+c.name+'（自定义）</option>'; });
+  h+='<option value="custom_new">➕ 自定义新角色…</option>';
+  sel.innerHTML = h;
+}
+
+function subToggle(key,name,desc){
+  return '<div class=\"perm-row\" style=\"padding:6px 0;\"><div><div class=\"pr-name\" style=\"font-size:var(--fs-14);\">'+name+'</div><div class=\"pr-desc\" style=\"font-size:var(--fs-12);color:var(--text-m);\">'+desc+'</div></div><label class=\"toggle\"><input type=\"checkbox\" id=\"perm_'+key+'\" data-key=\"'+key+'\"><span class=\"slider\"></span></label></div>';
+}
+
+function toggleSubPerms(){
+  var caigou=document.getElementById('perm_caigou');
+  var subC=document.getElementById('sub_caigou');
+  if(subC) subC.style.display=caigou&&caigou.checked?'block':'none';
+  var kucun=document.getElementById('perm_kucun');
+  var subK=document.getElementById('sub_kucun');
+  if(subK) subK.style.display=kucun&&kucun.checked?'block':'none';
+  var jizhang=document.getElementById('perm_jizhang');
+  var subJ=document.getElementById('sub_jizhang');
+  if(subJ) subJ.style.display=jizhang&&jizhang.checked?'block':'none';
+}
+
+function permToggle(key, name, desc){
+  return '<div class="perm-row">'+
+    '<div><div class="pr-name">'+name+'</div><div class="pr-desc">'+desc+'</div></div>'+
+    '<label class="toggle"><input type="checkbox" id="perm_'+key+'" data-key="'+key+'"><span class="slider"></span></label></div>';
+}
+
+function selectPermOpt(val){
+  document.getElementById('opt_editor').classList.toggle('active', val==='editor');
+  document.getElementById('opt_viewer').classList.toggle('active', val==='viewer');
+}
+
+function fillPermsToForm(u){
+  var perms = u.perms || {};
+  // All 6 nav toggles
+  ['baobiao','caidan','dingdan','caigou','kucun','jizhang','shuju'].forEach(function(k){
+    var el = document.getElementById('perm_'+k);
+    if(el) el.checked = perms[k]!==false;
+  });
+  var _ec2=document.getElementById('perm_chef'); if(_ec2) _ec2.checked=!!perms.chef;
+  // Sub permissions
+  ['caigou_edit_prod','caigou_edit_qty','caigou_add_prod','kucun_edit_qty','jizhang_edit'].forEach(function(k){
+    var el = document.getElementById('perm_'+k);
+    if(el) el.checked = !!perms[k];
+  });
+  toggleSubPerms();
+}
+
+function saveMember(){
+  var name = document.getElementById('mbrName').value.trim();
+  if(!name){ toast('请输入姓名',false); return; }
+
+  var roleSel = document.getElementById('mbrRole').value;
+  var pwd = document.getElementById('mbrPwd').value || '';
+  var pwd2 = document.getElementById('mbrPwd2') ? (document.getElementById('mbrPwd2').value||'') : '';
+
+  var isCustomNew = (roleSel==='custom_new');
+  var customName = '';
+  if(isCustomNew){
+    customName = (document.getElementById('mbrCustomName')?document.getElementById('mbrCustomName').value:'').trim();
+    if(!customName){ toast('请填写自定义角色名', false); return; }
+  }
+  if(!editingUserId && !pwd){ toast('须填写密码才能保存', false); return; }
+  if(pwd !== pwd2){ toast('两次输入的密码不一致', false); return; }
+
+  var role = roleSel;
+  if(isCustomNew){ role = 'cr::'+customName; }
+
+  var perms = {};
+  if(role!=='boss'){
+    ['baobiao','caidan','dingdan','caigou','kucun','jizhang','shuju','chef'].forEach(function(k){
+      var el=document.getElementById('perm_'+k);
+      if(el) perms[k]=el.checked;
+    });
+    ['caigou_edit_prod','caigou_edit_qty','caigou_add_prod','kucun_edit_qty','jizhang_edit'].forEach(function(k){
+      var el=document.getElementById('perm_'+k);
+      if(el&&el.checked) perms[k]=true;
+    });
+  }
+
+  // 新建自定义角色：保存角色模板（可复用）
+  if(isCustomNew){
+    var crs = getCustomRoles();
+    var hit = null;
+    for(var i=0;i<crs.length;i++){ if(crs[i].name===customName){ hit=crs[i]; break; } }
+    if(hit){ hit.perms = perms; } else { crs.push({name:customName, perms:perms}); }
+    saveCustomRoles(crs);
+  }
+
+  var users = getUsers();
+  if(editingUserId){
+    var idx = users.findIndex(function(u){return u.id===editingUserId;});
+    if(idx>=0){
+      users[idx].name = name;
+      users[idx].role = role;
+      users[idx].perms = perms;
+      if(pwd) users[idx].password = pwdEncode(pwd);
+    }
+  } else {
+    users.push({
+      id: 'u_'+Date.now()+'_'+Math.random().toString(36).slice(2,5),
+      name: name, role: role, active: true, perms: perms,
+      createdAt: todayStr(),
+      password: pwdEncode(pwd)
+    });
+  }
+
+  saveUsers(users);
+  addLog('user_edit', editingUserId?'编辑成员 '+name:'添加成员 '+name+'('+role+')', 'user');
+  closeMemberModal();
+  renderMemberList();
+  toast(editingUserId?'已更新 '+name:'已添加 '+name, true);
+}
+
+function deleteMember(){
+  if(!editingUserId) return;
+  if(!confirm('确定删除该成员？此操作不可撤销。')) return;
+  var users = getUsers().filter(function(u){return u.id!==editingUserId;});
+  saveUsers(users);
+  addLog('user_delete', '删除成员', 'user');
+  closeMemberModal();
+  renderMemberList();
+  toast('已删除', true);
+}
+
+// ═══════════ 数据管理 ═══════════
+function _hasDataPerm(){
+  if(typeof getUserPerms!=='function') return true; // gongxiang 未加载时放行，避免误锁
+  try{ return !!getUserPerms().shuju; }catch(e){ return true; }
+}
+function exportData(){
+  if(!_hasDataPerm()){ toast('无数据管理权限',false); return; }
+  var data = {};
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(k.indexOf('sxs_')===0 || k.indexOf('sp_')===0 || k.indexOf('youshu_')===0){
+      data[k] = localStorage.getItem(k);
+    }
+  }
+  // 加固2：导出时写入身份标记，便于导入端校验"这是餐小算的备份"
+  var payload = {
+    _meta: { app:'canxiaosuan', ver:1, exportedAt:new Date().toISOString(), shop: localStorage.getItem('sxs_shop_name')||'' },
+    data: data
+  };
+  var blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'canxiaosuan_backup_'+todayStr()+'.json';
+  a.click();
+  toast('数据已导出', true);
+}
+
+// 加固1：导入覆盖前，先自动下载一份"导入前快照"，防止误导入坏文件导致数据丢失
+function backupBeforeImport(){
+  try{
+    var data = {};
+    for(var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if(k.indexOf('sxs_')===0 || k.indexOf('sp_')===0 || k.indexOf('youshu_')===0){
+        data[k] = localStorage.getItem(k);
+      }
+    }
+    var payload = { _meta:{ app:'canxiaosuan', ver:1, note:'导入前自动备份', exportedAt:new Date().toISOString() }, data:data };
+    var blob = new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'canxiaosuan_before_import_'+todayStr()+'.json';
+    a.click();
+  }catch(e){ console.warn('backupBeforeImport:', e); }
+}
+
+function importData(){
+  if(!_hasDataPerm()){ toast('无数据管理权限',false); return; }
+  var input = document.createElement('input');
+  input.type='file'; input.accept='.json';
+  input.onchange = function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){
+      try{
+        var parsed = JSON.parse(ev.target.result);
+        // 加固2：格式校验，只认餐小算备份（新格式带 _meta，旧格式含业务前缀）
+        var dataObj = null, isOld = false;
+        if(parsed && parsed._meta && ['canxiaosuan','shengxinsuan'].includes(parsed._meta.app) && parsed.data && typeof parsed.data==='object'){
+          dataObj = parsed.data;
+        } else if(parsed && typeof parsed==='object'){
+          var hasBiz = Object.keys(parsed).some(function(k){ return k.indexOf('sxs_')===0||k.indexOf('sp_')===0||k.indexOf('youshu_')===0; });
+          if(hasBiz){ isOld = true; dataObj = parsed; }
+        }
+        if(!dataObj){ toast('这不是餐小算的备份文件', false); return; }
+        if(!confirm('即将覆盖当前数据。\n系统会先自动备份当前数据一份（可找回），确定导入？'+(isOld?'（旧格式备份）':''))) return;
+        backupBeforeImport(); // 覆盖前先留快照
+        Object.keys(dataObj).forEach(function(k){ localStorage.setItem(k, dataObj[k]); });
+        toast('数据已导入，即将刷新', true);
+        setTimeout(function(){ location.reload(); }, 1500);
+      }catch(err){ toast('文件格式错误', false); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// ════ 清空数据·密码确认 ════
+var _pendingClear = null; // 'all' | 'purchase'
+function requestClearData(kind){
+  if(!_hasDataPerm()){ toast('无数据管理权限',false); return; }
+  _pendingClear = kind;
+  document.getElementById('clearPwdTitle').textContent = (kind==='all'?'所有数据':'采购订单');
+  var inp = document.getElementById('clearPwdInput');
+  inp.value = '';
+  document.getElementById('clearPwdModal').classList.add('show');
+  setTimeout(function(){ try{ inp.focus(); }catch(e){} }, 60);
+}
+function confirmClearWithPwd(){
+  var pwd = (document.getElementById('clearPwdInput').value||'').trim();
+  var uid = getCurrentUserId();
+  if(!uid || !checkPwd(uid, pwd)){
+    toast('密码错误，无法删除', false);
+    return;
+  }
+  document.getElementById('clearPwdModal').classList.remove('show');
+  if(_pendingClear==='all'){ doClearData(); }
+  else if(_pendingClear==='purchase'){ doClearPurchaseOrders(); }
+  _pendingClear = null;
+}
+function cancelClearPwd(){
+  document.getElementById('clearPwdModal').classList.remove('show');
+  _pendingClear = null;
+}
+
+// ════ 学习加油站弹窗 ════
+function openStudyHub(){
+  document.getElementById('studyHubModal').classList.add('show');
+}
+function closeStudyHub(){
+  document.getElementById('studyHubModal').classList.remove('show');
+}
+
+// ═══════════ 数据管理折叠 + 菜谱/桌台管理（原 menu_new 菜谱页，现统一在此编辑）═══════════
+function toggleDataMgmt(){
+  var b=document.getElementById('dmBody'), a=document.getElementById('dmArrow');
+  if(!b) return;
+  if(b.style.display==='none'){ b.style.display='block'; a.style.transform='rotate(90deg)'; }
+  else { b.style.display='none'; a.style.transform='rotate(0deg)'; }
+}
+function openRecipeMgr(){
+  var tr='<button onclick="openRecipeEditor()" style="padding:6px 12px;background:var(--brand);color:#fff;border:none;border-radius:8px;font-size:var(--fs-13);cursor:pointer;font-family:inherit;">＋ 添加单品</button>'
+       +'<button onclick="openTaocanEditor()" style="padding:6px 12px;background:var(--brand-light);color:var(--brand);border:none;border-radius:8px;font-size:var(--fs-13);cursor:pointer;font-family:inherit;margin-left:6px;">＋ 添加套餐</button>';
+  var h='<div style="display:flex;gap:8px;margin-bottom:12px;">'
+    +'<button onclick="renderRecipesShezhi()" style="flex:1;padding:10px;border:none;border-radius:10px;background:var(--brand);color:#fff;font-weight:600;cursor:pointer;font-family:inherit;">🍽️ 单品</button>'
+    +'<button onclick="renderTaocansShezhi()" style="flex:1;padding:10px;border:none;border-radius:10px;background:var(--brand-light);color:var(--brand);font-weight:600;cursor:pointer;font-family:inherit;">🍱 套餐</button>'
+    +'</div>'
+    +'<div id="recipeMgrBody"></div>';
+  showOverlay('🍽️ 菜谱管理', h, tr);
+  renderRecipesShezhi();
+}
+
+// ── 浮层工具（与 menu_new 一致）──
+function showOverlay(title,html,titleRight){
+  if(!html){ html=title; title=''; }
+  var d=document.createElement('div');
+  d.className='overlay';
+  // 贴最上方显示；并做软键盘不遮挡输入框（聚焦输入框时滚动到可视区中央）
+  d.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;overflow-y:auto;-webkit-overflow-scrolling:touch;';
+  var _close='<span onclick="closeOverlay()" style="font-size:var(--fs-24);line-height:1;cursor:pointer;color:var(--text-m);">×</span>';
+  var _right=titleRight?('<span style="display:flex;align-items:center;gap:6px;">'+titleRight+_close+'</span>'):_close;
+  d.innerHTML='<div style="min-height:100%;display:flex;align-items:flex-start;justify-content:center;padding:10px 0;">'
+    +'<div style="background:var(--white);border-radius:16px;width:100%;max-width:420px;">'
+    +(title?'<div style="display:flex;justify-content:space-between;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--border);border-radius:16px 16px 0 0;"><span style="font-size:var(--fs-16);font-weight:700;">'+title+'</span>'+_right+'</div>':'')
+    +html
+    +'</div></div>';
+  d.addEventListener('click',function(e){ if(e.target===d) closeOverlay(); });
+  d.addEventListener('focusin', function(e){
+    var t=e.target;
+    if(t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT')){
+      setTimeout(function(){ try{ t.scrollIntoView({block:'center',behavior:'smooth'}); }catch(err){} }, 300);
+    }
+  });
+  document.body.appendChild(d);
+}
+function closeOverlay(){
+  // 关闭最上层弹窗（支持菜谱管理弹窗内再开编辑弹窗的嵌套场景）
+  var o=document.querySelectorAll('.overlay');
+  if(o.length) o[o.length-1].remove();
+}
+
+// ── 默认示例菜谱（首次无数据时预置）──
+var DEFAULT_RECIPES = [
+  // ── 凉菜 ──
+  {id:'d_001',name:'凉拌折耳根',price:12,category:'凉菜',icon:'🌿',seasonCoef:2,
+   ingredients:[{prodId:'p_v27',amount:0.5},{prodId:'p_j13',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_j02',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01},{prodId:'p_x04',amount:0.01}]},
+  {id:'d_002',name:'凉拌木耳',price:12,category:'凉菜',icon:'🍄',seasonCoef:2,
+   ingredients:[{prodId:'p_v25',amount:0.3},{prodId:'p_j13',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_j11',amount:0.01},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_003',name:'凉拌皮蛋',price:15,category:'凉菜',icon:'🥚',seasonCoef:2,
+   ingredients:[{prodId:'p_e02',amount:2},{prodId:'p_j13',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_v04',amount:0.05},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_004',name:'凉拌黄瓜',price:10,category:'凉菜',icon:'🥒',seasonCoef:2,
+   ingredients:[{prodId:'p_v20',amount:0.4},{prodId:'p_j13',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_j11',amount:0.01},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01},{prodId:'p_x04',amount:0.01}]},
+  {id:'d_005',name:'凉拌豆芽',price:8,category:'凉菜',icon:'🌱',seasonCoef:2,
+   ingredients:[{prodId:'p_v08',amount:0.5},{prodId:'p_v04',amount:0.05},{prodId:'p_j13',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01},{prodId:'p_x03',amount:0.005}]},
+  {id:'d_006',name:'凉拌腐竹',price:12,category:'凉菜',icon:'🫘',seasonCoef:2,
+   ingredients:[{prodId:'p_d04',amount:0.2},{prodId:'p_j13',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_v04',amount:0.03},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01}]},
+  // ── 鱼类 ──
+  {id:'d_101',name:'水煮鱼',price:58,category:'鱼类',icon:'🐟',seasonCoef:3,
+   ingredients:[{prodId:'p_s01',amount:1.5},{prodId:'p_j01',amount:0.15},{prodId:'p_j02',amount:0.1},{prodId:'p_j14',amount:0.05},{prodId:'p_o01',amount:0.2},{prodId:'p_x01',amount:0.03},{prodId:'p_x03',amount:0.02},{prodId:'p_v07',amount:0.05},{prodId:'p_v06',amount:0.05},{prodId:'p_v16',amount:0.05},{prodId:'p_v08',amount:0.3},{prodId:'p_v11',amount:0.2}]},
+  {id:'d_102',name:'酸菜鱼',price:48,category:'鱼类',icon:'🐟',seasonCoef:3,
+   ingredients:[{prodId:'p_s01',amount:1.5},{prodId:'p_v07',amount:0.1},{prodId:'p_v06',amount:0.1},{prodId:'p_v16',amount:0.1},{prodId:'p_j02',amount:0.1},{prodId:'p_j14',amount:0.05},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.02},{prodId:'p_t04',amount:0.02},{prodId:'p_g04',amount:0.05}]},
+  {id:'d_103',name:'豆瓣鱼',price:42,category:'鱼类',icon:'🐟',seasonCoef:3,
+   ingredients:[{prodId:'p_s01',amount:1.2},{prodId:'p_j01',amount:0.1},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.05},{prodId:'p_v07',amount:0.05},{prodId:'p_v06',amount:0.05},{prodId:'p_v04',amount:0.03},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.03}]},
+  {id:'d_104',name:'烤鱼（草鱼）',price:68,category:'鱼类',icon:'🐟',seasonCoef:4,
+   ingredients:[{prodId:'p_s01',amount:1.8},{prodId:'p_j01',amount:0.1},{prodId:'p_j07',amount:0.2},{prodId:'p_j14',amount:0.05},{prodId:'p_x01',amount:0.03},{prodId:'p_x03',amount:0.02},{prodId:'p_v07',amount:0.05},{prodId:'p_v06',amount:0.05},{prodId:'p_v11',amount:0.2},{prodId:'p_v08',amount:0.2},{prodId:'p_o01',amount:0.2},{prodId:'p_t06',amount:0.02}]},
+  // ── 肉类 ──
+  {id:'d_201',name:'回锅肉',price:32,category:'肉类',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.5},{prodId:'p_r02',amount:0.3},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_j15',amount:0.02},{prodId:'p_v03',amount:0.2},{prodId:'p_v06',amount:0.03},{prodId:'p_v07',amount:0.03},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.01},{prodId:'p_x01',amount:0.01}]},
+  {id:'d_202',name:'盐煎肉',price:30,category:'肉类',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.5},{prodId:'p_r02',amount:0.3},{prodId:'p_j01',amount:0.05},{prodId:'p_t04',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_v03',amount:0.15},{prodId:'p_v06',amount:0.03},{prodId:'p_v07',amount:0.03},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.01},{prodId:'p_x01',amount:0.01}]},
+  {id:'d_203',name:'水煮肉片',price:38,category:'肉类',icon:'🌶️',seasonCoef:3,
+   ingredients:[{prodId:'p_r03',amount:0.6},{prodId:'p_j01',amount:0.1},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.02},{prodId:'p_o01',amount:0.2},{prodId:'p_x01',amount:0.03},{prodId:'p_x03',amount:0.02},{prodId:'p_v07',amount:0.05},{prodId:'p_v06',amount:0.05},{prodId:'p_v04',amount:0.05},{prodId:'p_v08',amount:0.3},{prodId:'p_v11',amount:0.2},{prodId:'p_g04',amount:0.03},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_204',name:'鱼香肉丝',price:28,category:'肉类',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r03',amount:0.4},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.04},{prodId:'p_j13',amount:0.04},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.05},{prodId:'p_v22',amount:0.1},{prodId:'p_o01',amount:0.08},{prodId:'p_g04',amount:0.02}]},
+  {id:'d_205',name:'宫保鸡丁',price:28,category:'肉类',icon:'🍗',seasonCoef:3,
+   ingredients:[{prodId:'p_r06',amount:0.4},{prodId:'p_v12',amount:0.15},{prodId:'p_x13',amount:0.01},{prodId:'p_t01',amount:0.03},{prodId:'p_j14',amount:0.03},{prodId:'p_j13',amount:0.03},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.01},{prodId:'p_x01',amount:0.01}]},
+  {id:'d_206',name:'辣子鸡',price:38,category:'肉类',icon:'🌶️',seasonCoef:4,
+   ingredients:[{prodId:'p_r06',amount:0.8},{prodId:'p_x01',amount:0.1},{prodId:'p_x03',amount:0.03},{prodId:'p_j01',amount:0.03},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_207',name:'口水鸡',price:36,category:'肉类',icon:'🍗',seasonCoef:3,
+   ingredients:[{prodId:'p_r07',amount:0.8},{prodId:'p_x03',amount:0.02},{prodId:'p_x04',amount:0.02},{prodId:'p_x01',amount:0.02},{prodId:'p_j14',amount:0.05},{prodId:'p_j03',amount:0.05},{prodId:'p_t01',amount:0.02},{prodId:'p_j13',amount:0.03},{prodId:'p_v04',amount:0.03},{prodId:'p_f01',amount:0.5},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_208',name:'芽菜扣肉',price:38,category:'肉类',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r11',amount:0.6},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.05},{prodId:'p_j15',amount:0.03},{prodId:'p_t01',amount:0.03},{prodId:'p_v06',amount:0.05},{prodId:'p_v07',amount:0.03},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.01},{prodId:'p_g03',amount:0.05}]},
+  {id:'d_209',name:'干锅花菜',price:26,category:'肉类',icon:'🥦',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.3},{prodId:'p_v21',amount:0.4},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_j02',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_x01',amount:0.02},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_210',name:'锅巴肉片',price:32,category:'肉类',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.4},{prodId:'p_g02',amount:0.1},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.03},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_v16',amount:0.1},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.03}]},
+  {id:'d_211',name:'火爆黄喉',price:38,category:'肉类',icon:'🦆',seasonCoef:3,
+   ingredients:[{prodId:'p_r08',amount:0.5},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_j02',amount:0.02},{prodId:'p_x01',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_212',name:'干锅肥肠',price:42,category:'肉类',icon:'🟤',seasonCoef:3,
+   ingredients:[{prodId:'p_r13',amount:0.5},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_j02',amount:0.03},{prodId:'p_x01',amount:0.03},{prodId:'p_x03',amount:0.01},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_v11',amount:0.2},{prodId:'p_o01',amount:0.2},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_213',name:'干锅腊肉',price:42,category:'肉类',icon:'🥓',seasonCoef:3,
+   ingredients:[{prodId:'p_r09',amount:0.4},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_j02',amount:0.02},{prodId:'p_x01',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_v11',amount:0.2},{prodId:'p_v22',amount:0.15},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  // ── 豆腐 ──
+  {id:'d_301',name:'麻婆豆腐',price:18,category:'豆腐',icon:'🫘',seasonCoef:3,
+   ingredients:[{prodId:'p_d01',amount:1},{prodId:'p_r01',amount:0.15},{prodId:'p_j01',amount:0.08},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.02},{prodId:'p_o01',amount:0.1},{prodId:'p_x03',amount:0.02},{prodId:'p_x01',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.05},{prodId:'p_v04',amount:0.03},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.02}]},
+  {id:'d_302',name:'家常豆腐',price:18,category:'豆腐',icon:'🫘',seasonCoef:3,
+   ingredients:[{prodId:'p_d02',amount:1},{prodId:'p_r01',amount:0.15},{prodId:'p_v12',amount:0.1},{prodId:'p_v20',amount:0.1},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.02},{prodId:'p_o01',amount:0.1},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.03}]},
+  {id:'d_303',name:'熊掌豆腐',price:18,category:'豆腐',icon:'🫘',seasonCoef:3,
+   ingredients:[{prodId:'p_d02',amount:1.5},{prodId:'p_r01',amount:0.1},{prodId:'p_v03',amount:0.1},{prodId:'p_v12',amount:0.1},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_j15',amount:0.02},{prodId:'p_j02',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_o01',amount:0.1},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.03}]},
+  {id:'d_304',name:'肉末豆腐',price:16,category:'豆腐',icon:'🫘',seasonCoef:2,
+   ingredients:[{prodId:'p_d01',amount:1},{prodId:'p_r01',amount:0.2},{prodId:'p_j14',amount:0.03},{prodId:'p_j15',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.05},{prodId:'p_v04',amount:0.03},{prodId:'p_o01',amount:0.05},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.02}]},
+  {id:'d_305',name:'皮蛋豆腐',price:14,category:'豆腐',icon:'🥚',seasonCoef:2,
+   ingredients:[{prodId:'p_d01',amount:0.5},{prodId:'p_e02',amount:1},{prodId:'p_j13',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_f01',amount:0.3},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01}]},
+  // ── 素菜 ──
+  {id:'d_401',name:'炒时蔬',price:12,category:'素菜',icon:'🥬',seasonCoef:2,
+   ingredients:[{prodId:'p_v01',amount:0.5},{prodId:'p_j14',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02}]},
+  {id:'d_402',name:'虎皮青椒',price:14,category:'素菜',icon:'🫑',seasonCoef:2,
+   ingredients:[{prodId:'p_v02',amount:0.6},{prodId:'p_j01',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_o01',amount:0.1},{prodId:'p_v06',amount:0.03},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_403',name:'干煸四季豆',price:14,category:'素菜',icon:'🫛',seasonCoef:2,
+   ingredients:[{prodId:'p_v14',amount:0.5},{prodId:'p_j01',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_t01',amount:0.01},{prodId:'p_o01',amount:0.1},{prodId:'p_v06',amount:0.03},{prodId:'p_x01',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_404',name:'酸辣土豆丝',price:10,category:'素菜',icon:'🥔',seasonCoef:2,
+   ingredients:[{prodId:'p_v11',amount:0.5},{prodId:'p_j13',amount:0.05},{prodId:'p_j02',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_v04',amount:0.03}]},
+  {id:'d_405',name:'炒藕片',price:14,category:'素菜',icon:'🥔',seasonCoef:2,
+   ingredients:[{prodId:'p_v10',amount:0.5},{prodId:'p_j13',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_v04',amount:0.03},{prodId:'p_x13',amount:0.005}]},
+  {id:'d_406',name:'干锅花菜',price:22,category:'素菜',icon:'🥦',seasonCoef:3,
+   ingredients:[{prodId:'p_v21',amount:0.5},{prodId:'p_j01',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_j02',amount:0.02},{prodId:'p_x01',amount:0.02},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02},{prodId:'p_o01',amount:0.15},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_407',name:'炒金针菇',price:12,category:'素菜',icon:'🍄',seasonCoef:2,
+   ingredients:[{prodId:'p_v23',amount:0.3},{prodId:'p_j13',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_v04',amount:0.03}]},
+  {id:'d_408',name:'炒木耳',price:12,category:'素菜',icon:'🍄',seasonCoef:2,
+   ingredients:[{prodId:'p_v25',amount:0.3},{prodId:'p_v12',amount:0.1},{prodId:'p_v04',amount:0.05},{prodId:'p_j14',amount:0.02},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_409',name:'炒魔芋',price:12,category:'素菜',icon:'🟫',seasonCoef:2,
+   ingredients:[{prodId:'p_v26',amount:0.5},{prodId:'p_j01',amount:0.03},{prodId:'p_j14',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02},{prodId:'p_t06',amount:0.01},{prodId:'p_v04',amount:0.03},{prodId:'p_x01',amount:0.01}]},
+  // ── 蛋类/主食 ──
+  {id:'d_501',name:'番茄炒蛋',price:12,category:'蛋类',icon:'🍅',seasonCoef:2,
+   ingredients:[{prodId:'p_e01',amount:0.4},{prodId:'p_v06',amount:0.1},{prodId:'p_j06',amount:0.05},{prodId:'p_t01',amount:0.03},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v04',amount:0.03},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_502',name:'蛋炒饭',price:10,category:'主食',icon:'🍚',seasonCoef:2,
+   ingredients:[{prodId:'p_g01',amount:0.3},{prodId:'p_e01',amount:0.2},{prodId:'p_j14',amount:0.02},{prodId:'p_v04',amount:0.03},{prodId:'p_v07',amount:0.02},{prodId:'p_o01',amount:0.06},{prodId:'p_t06',amount:0.01},{prodId:'p_t04',amount:0.01}]},
+  {id:'d_503',name:'韭菜炒蛋',price:12,category:'蛋类',icon:'🥚',seasonCoef:2,
+   ingredients:[{prodId:'p_e01',amount:0.4},{prodId:'p_v16',amount:0.3},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01},{prodId:'p_v04',amount:0.03},{prodId:'p_o01',amount:0.08},{prodId:'p_v07',amount:0.02},{prodId:'p_v06',amount:0.02}]},
+  {id:'d_601',name:'炒河粉',price:12,category:'主食',icon:'🍜',seasonCoef:2,
+   ingredients:[{prodId:'p_r01',amount:0.15},{prodId:'p_v04',amount:0.05},{prodId:'p_v16',amount:0.1},{prodId:'p_j14',amount:0.03},{prodId:'p_j15',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.08},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.02}]},
+  {id:'d_602',name:'担担面',price:12,category:'主食',icon:'🍜',seasonCoef:2,
+   ingredients:[{prodId:'p_r01',amount:0.15},{prodId:'p_v04',amount:0.05},{prodId:'p_j03',amount:0.03},{prodId:'p_j14',amount:0.03},{prodId:'p_j13',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_x03',amount:0.005},{prodId:'p_o01',amount:0.05},{prodId:'p_t06',amount:0.01},{prodId:'p_f01',amount:0.3}]},
+  {id:'d_603',name:'宜宾燃面',price:12,category:'主食',icon:'🍜',seasonCoef:2,
+   ingredients:[{prodId:'p_r01',amount:0.1},{prodId:'p_d05',amount:0.05},{prodId:'p_v04',amount:0.05},{prodId:'p_j03',amount:0.05},{prodId:'p_j14',amount:0.03},{prodId:'p_t01',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_x03',amount:0.005},{prodId:'p_x04',amount:0.005},{prodId:'p_o01',amount:0.1},{prodId:'p_t06',amount:0.01}]},
+  // ── 蒸菜 ──
+  {id:'d_701',name:'粉蒸肉',price:36,category:'蒸菜',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r02',amount:0.6},{prodId:'p_j09',amount:0.1},{prodId:'p_j14',amount:0.03},{prodId:'p_j15',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_o02',amount:0.05},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_702',name:'咸烧白',price:38,category:'蒸菜',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.8},{prodId:'p_j09',amount:0.1},{prodId:'p_j14',amount:0.05},{prodId:'p_j15',amount:0.03},{prodId:'p_t01',amount:0.03},{prodId:'p_t04',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_o02',amount:0.05},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_703',name:'夹沙肉',price:38,category:'蒸菜',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.6},{prodId:'p_e01',amount:0.3},{prodId:'p_j09',amount:0.1},{prodId:'p_j14',amount:0.05},{prodId:'p_j15',amount:0.03},{prodId:'p_t01',amount:0.03},{prodId:'p_t04',amount:0.02},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_o02',amount:0.05},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_704',name:'芽菜蒸肉',price:32,category:'蒸菜',icon:'🥩',seasonCoef:3,
+   ingredients:[{prodId:'p_r01',amount:0.5},{prodId:'p_g06',amount:0.2},{prodId:'p_j09',amount:0.08},{prodId:'p_j14',amount:0.03},{prodId:'p_j15',amount:0.02},{prodId:'p_t01',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_o01',amount:0.05},{prodId:'p_t06',amount:0.01}]},
+  // ── 汤类 ──
+  {id:'d_801',name:'酸菜粉丝汤',price:12,category:'汤类',icon:'🍲',seasonCoef:2,
+   ingredients:[{prodId:'p_j02',amount:0.08},{prodId:'p_j14',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_v07',amount:0.03},{prodId:'p_v06',amount:0.03},{prodId:'p_v04',amount:0.03},{prodId:'p_o01',amount:0.05},{prodId:'p_t06',amount:0.01}]},
+  {id:'d_802',name:'番茄蛋汤',price:10,category:'汤类',icon:'🍅',seasonCoef:2,
+   ingredients:[{prodId:'p_e01',amount:0.3},{prodId:'p_v06',amount:0.05},{prodId:'p_j06',amount:0.05},{prodId:'p_t01',amount:0.02},{prodId:'p_t04',amount:0.01},{prodId:'p_o01',amount:0.05},{prodId:'p_v07',amount:0.02},{prodId:'p_v04',amount:0.03},{prodId:'p_t06',amount:0.01},{prodId:'p_g04',amount:0.02}]},
+  {id:'d_803',name:'紫菜蛋汤',price:8,category:'汤类',icon:'🥚',seasonCoef:2,
+   ingredients:[{prodId:'p_e01',amount:0.2},{prodId:'p_v04',amount:0.03},{prodId:'p_t04',amount:0.01},{prodId:'p_t06',amount:0.01},{prodId:'p_v07',amount:0.02},{prodId:'p_o01',amount:0.03}]}
+];
+
+function getRecipes(){ var d=loadJSON('sxs_recipes'); var r=(d && d.length) ? d : (function(){saveRecipes(DEFAULT_RECIPES);return DEFAULT_RECIPES;})(); return r; }
+function saveRecipes(v){ saveJSON('sxs_recipes',v); }
+function getTaocans(){ return loadJSON('sxs_taocans'); }
+function saveTaocans(v){ saveJSON('sxs_taocans',v); }
+function getProds(){ return loadJSON('sp_prods'); }
+
+function renderRecipesShezhi(){
+  var list=getRecipes();
+  var el=document.getElementById('recipeMgrBody'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--text-m);padding:20px;">还没有单品<br><button onclick="openRecipeEditor()" style="margin-top:8px;padding:6px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;">＋ 添加单品</button></div>'; return; }
+  var h='';
+  list.forEach(function(r,i){
+    h+='<div style="background:var(--white);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;">';
+    h+='<div style="display:flex;align-items:center;gap:10px;">';
+    h+='<span style="font-size:var(--fs-26);">'+(r.icon||'🍜')+'</span>';
+    h+='<div style="flex:1;min-width:0;"><div style="font-size:var(--fs-15);font-weight:600;">'+r.name+'</div><div style="font-size:var(--fs-13);color:var(--text-m);">'+(r.category||'其他')+' · ¥'+(r.price||0)+'</div></div>';
+    h+='<button onclick="editRecipe('+i+')" style="background:var(--brand-light);color:var(--brand);border:none;border-radius:8px;padding:6px 12px;font-size:var(--fs-13);cursor:pointer;font-family:inherit;margin-right:6px;">编辑</button>';
+    h+='<button onclick="deleteRecipe('+i+')" style="background:#fde8e8;color:#e23b3b;border:none;border-radius:8px;padding:6px 12px;font-size:var(--fs-13);cursor:pointer;font-family:inherit;">删除</button>';
+    h+='</div></div>';
+  });
+  el.innerHTML=h;
+}
+function addIngRow(){
+  var box=document.getElementById('reIngs'); if(!box) return;
+  var div=document.createElement('div');
+  div.style.cssText='display:flex;gap:4px;align-items:center;margin-top:4px;';
+  div.innerHTML='<input value="" placeholder="食材名" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);" oninput="reIngPick(this)"><input type="number" value="" placeholder="用量" style="width:60px;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);"><button onclick="this.parentNode.remove()" style="color:var(--red);border:none;background:none;cursor:pointer;">×</button>';
+  box.appendChild(div);
+}
+function reIngPick(el){}
+function openRecipeEditor(idx){
+  var r=idx!==undefined?getRecipes()[idx]:{name:'',price:0,icon:'🍜',category:'热菜',ingredients:[]};
+  var h='<div style="padding:12px;">';
+  h+='<div style="margin-bottom:10px;"><label style="font-size:var(--fs-13);color:var(--text-m);">名称</label><br><input id="reName" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(r.name||'')+'"></div>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+  h+='<div style="flex:1;"><label style="font-size:var(--fs-13);color:var(--text-m);">售价¥</label><br><input id="rePrice" type="number" step="0.1" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(r.price||0)+'"></div>';
+  h+='<div style="flex:1;"><label style="font-size:var(--fs-13);color:var(--text-m);">图标</label><br><div style="display:flex;gap:6px;align-items:center;"><input id="reIcon" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(r.icon||'🍜')+'"><button type="button" onclick="openEmojiPicker(\'reIcon\')" style="flex-shrink:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:var(--fs-15);cursor:pointer;font-family:inherit;">🙂</button></div></div>';
+  h+='</div>';
+  h+='<div style="margin-bottom:10px;"><label style="font-size:var(--fs-13);color:var(--text-m);">分类</label><br><input id="reCat" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(r.category||'')+'"></div>';
+  h+='<div style="margin-bottom:10px;"><span style="font-size:var(--fs-13);color:var(--text-m);">食材</span>';
+  h+='<div id="reIngs">';
+  (r.ingredients||[]).forEach(function(ing,j){
+    var p=getProds().find(function(x){return x.id===ing.prodId;});
+    h+='<div style="display:flex;gap:4px;align-items:center;margin-top:4px;"><input value="'+(p?p.name:'')+'" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);" oninput="reIngPick(this)"><input type="number" value="'+(ing.amount||0)+'" style="width:90px;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);" placeholder="用量 单位:g"><button onclick="this.parentNode.remove()" style="color:var(--red);border:none;background:none;cursor:pointer;">×</button></div>';
+  });
+  h+='</div><button onclick="addIngRow()" style="color:var(--brand);border:1px dashed var(--brand);border-radius:6px;padding:4px 12px;font-size:var(--fs-13);background:none;cursor:pointer;margin-top:4px;">+ 添加食材</button></div>';
+  h+='<button onclick="saveRecipe('+(idx!==undefined?idx:-1)+')" style="width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:var(--fs-15);font-weight:600;cursor:pointer;margin-top:8px;">保存</button>';
+  if(idx!==undefined) h+='<button onclick="deleteRecipe('+idx+')" style="width:100%;padding:10px;background:none;color:var(--red);border:none;font-size:var(--fs-14);cursor:pointer;margin-top:4px;">删除</button>';
+  h+='</div>';
+  showOverlay('✏️ 编辑菜谱', h);
+}
+function editRecipe(idx){ openRecipeEditor(idx); }
+function saveRecipe(idx){
+  var list=getRecipes();
+  var r={ id:Date.now(), name:document.getElementById('reName').value||'未命名', price:parseFloat(document.getElementById('rePrice').value)||0, icon:document.getElementById('reIcon').value||'🍜', category:document.getElementById('reCat').value||'其他', ingredients:[] };
+  var ings=document.querySelectorAll('#reIngs > div');
+  ings.forEach(function(div){
+    var inputs=div.querySelectorAll('input');
+    var name=inputs[0].value;
+    var amt=parseFloat(inputs[1].value)||0;
+    var prod=getProds().find(function(p){return p.name===name;});
+    if(name&&amt>0) r.ingredients.push({prodId:prod?prod.id:'',prodName:name,amount:amt});
+  });
+  if(idx>=0){ var old=getRecipes()[idx]; r.id=old.id; list.splice(idx,1,r); }
+  else list.push(r);
+  saveRecipes(list);
+  closeOverlay(); renderRecipesShezhi(); toast('已保存');
+}
+function deleteRecipe(idx){
+  if(!confirm('确定删除？')) return;
+  var list=getRecipes(); list.splice(idx,1); saveRecipes(list);
+  closeOverlay(); renderRecipesShezhi(); toast('已删除');
+}
+function renderTaocansShezhi(){
+  var list=getTaocans();
+  var el=document.getElementById('recipeMgrBody'); if(!el) return;
+  if(!list.length){ el.innerHTML='<div style="text-align:center;color:var(--text-m);padding:20px;">还没有套餐<br><button onclick="openTaocanEditor()" style="margin-top:8px;padding:6px 16px;background:var(--brand);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:inherit;">＋ 添加套餐</button></div>'; return; }
+  var h='';
+  list.forEach(function(t,i){
+    h+='<div style="background:var(--white);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;">';
+    h+='<div style="display:flex;align-items:center;gap:10px;">';
+    h+='<span style="font-size:var(--fs-28);">'+(t.icon||'🍱')+'</span>';
+    h+='<div style="flex:1;min-width:0;"><div style="font-size:var(--fs-15);font-weight:600;">'+t.name+'</div><div style="font-size:var(--fs-13);color:var(--text-m);">'+(t.category||'')+' · ¥'+(t.price||0)+'</div></div>';
+    h+='<button onclick="editTaocan('+i+')" style="background:var(--brand-light);color:var(--brand);border:none;border-radius:8px;padding:6px 12px;font-size:var(--fs-13);cursor:pointer;font-family:inherit;margin-right:6px;">编辑</button>';
+    h+='<button onclick="deleteTaocan('+i+')" style="background:#fde8e8;color:#e23b3b;border:none;border-radius:8px;padding:6px 12px;font-size:var(--fs-13);cursor:pointer;font-family:inherit;">删除</button>';
+    h+='</div></div>';
+  });
+  el.innerHTML=h;
+}
+function addCompPick(){
+  var box=document.getElementById('tcComps'); if(!box) return;
+  var recipes=getRecipes();
+  var opts='<option value="">— 选择单品 —</option>'+recipes.map(function(r){return '<option value="'+r.id+'">'+r.name+'</option>';}).join('');
+  var div=document.createElement('div');
+  div.style.cssText='display:flex;gap:4px;align-items:center;margin-top:4px;';
+  div.innerHTML='<select class="tc-recipe" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);">'+opts+'</select>'
+    +'<input type="number" step="0.1" min="0" placeholder="用量 单位:g" class="tc-amt" style="width:110px;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);">'
+    +'<select class="tc-type" style="padding:4px;font-size:var(--fs-12);"><option value="must">必选</option><option value="opt">可选</option></select>'
+    +'<button onclick="this.parentNode.remove()" style="color:var(--red);border:none;background:none;cursor:pointer;">×</button>';
+  box.appendChild(div);
+}
+function openTaocanEditor(idx){
+  var t=idx!==undefined?getTaocans()[idx]:{name:'',price:0,icon:'🍱',category:'',components:[]};
+  var recipes=getRecipes();
+  var h='<div style="padding:12px;">';
+  h+='<div style="margin-bottom:10px;"><label style="font-size:var(--fs-13);color:var(--text-m);">套餐名称</label><br><input id="tcName" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(t.name||'')+'"></div>';
+  h+='<div style="display:flex;gap:8px;margin-bottom:10px;">';
+  h+='<div style="flex:1;"><label style="font-size:var(--fs-13);color:var(--text-m);">售价¥</label><br><input id="tcPrice" type="number" step="0.1" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(t.price||0)+'"></div>';
+  h+='<div style="flex:1;"><label style="font-size:var(--fs-13);color:var(--text-m);">图标</label><br><div style="display:flex;gap:6px;align-items:center;"><input id="tcIcon" style="flex:1;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(t.icon||'🍱')+'"><button type="button" onclick="openEmojiPicker(\'tcIcon\')" style="flex-shrink:0;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg);font-size:var(--fs-15);cursor:pointer;font-family:inherit;">🙂</button></div></div>';
+  h+='</div>';
+  h+='<div style="margin-bottom:10px;"><label style="font-size:var(--fs-13);color:var(--text-m);">分类</label><br><input id="tcCat" style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-15);" value="'+(t.category||'')+'"></div>';
+  h+='<div style="margin-bottom:10px;"><span style="font-size:var(--fs-13);color:var(--text-m);">包含单品</span><div id="tcComps">';
+  (t.components||[]).forEach(function(c,j){
+    var opts='<option value="">— 选择单品 —</option>'+recipes.map(function(r){return '<option value="'+r.id+'"'+(r.id===c.recipeId?' selected':'')+'>'+r.name+'</option>';}).join('');
+    h+='<div style="display:flex;gap:4px;align-items:center;margin-top:4px;">';
+    h+='<select class="tc-recipe" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);">'+opts+'</select>';
+    h+='<input type="number" step="0.1" min="0" value="'+(Number(c.amount)||'')+'" placeholder="用量 单位:g" class="tc-amt" style="width:110px;padding:6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-13);">';
+    h+='<select class="tc-type" style="padding:4px;font-size:var(--fs-12);"><option value="must"'+((c.type||'must')==='must'?' selected':'')+'>必选</option><option value="opt"'+((c.type||'must')==='opt'?' selected':'')+'>可选</option></select>';
+    h+='<button onclick="this.parentNode.remove()" style="color:var(--red);border:none;background:none;cursor:pointer;">×</button></div>';
+  });
+  h+='</div><button onclick="addCompPick()" style="color:var(--brand);border:1px dashed var(--brand);border-radius:6px;padding:4px 12px;font-size:var(--fs-13);background:none;cursor:pointer;margin-top:4px;">+ 选择单品</button></div>';
+  h+='<button onclick="saveTaocan('+(idx!==undefined?idx:-1)+')" style="width:100%;padding:12px;background:var(--brand);color:#fff;border:none;border-radius:12px;font-size:var(--fs-15);font-weight:600;cursor:pointer;margin-top:8px;">保存</button>';
+  if(idx!==undefined) h+='<button onclick="deleteTaocan('+idx+')" style="width:100%;padding:10px;background:none;color:var(--red);border:none;font-size:var(--fs-14);cursor:pointer;margin-top:4px;">删除</button>';
+  h+='</div>';
+  showOverlay('✏️ 编辑套餐', h);
+}
+function editTaocan(idx){ openTaocanEditor(idx); }
+function saveTaocan(idx){
+  var list=getTaocans();
+  var t={id:Date.now(), name:document.getElementById('tcName').value||'未命名', price:parseFloat(document.getElementById('tcPrice').value)||0, icon:document.getElementById('tcIcon').value||'🍱', category:document.getElementById('tcCat').value||'', components:[] };
+  var divs=document.querySelectorAll('#tcComps > div');
+  divs.forEach(function(div){
+    var sel=div.querySelector('.tc-recipe');
+    var rid=sel?sel.value:'';
+    if(!rid) return;
+    var amt=parseFloat(div.querySelector('.tc-amt').value)||0;
+    var type=div.querySelector('.tc-type').value;
+    t.components.push({recipeId:rid, type:type, amount:amt});
+  });
+  if(idx>=0){ var old=getTaocans()[idx]; t.id=old.id; list.splice(idx,1,t); }
+  else list.push(t);
+  saveTaocans(list);
+  closeOverlay(); renderTaocansShezhi(); toast('已保存');
+}
+function deleteTaocan(idx){
+  if(!confirm('确定删除？')) return;
+  var list=getTaocans(); list.splice(idx,1); saveTaocans(list);
+  closeOverlay(); renderTaocansShezhi(); toast('已删除');
+}
+
+// ── 桌台管理（迁移自 menu_new，适配 shezhi 无 renderTableGrid/renderMenu）──
+function getTables(){ return loadJSON('sxs_tables'); }
+function saveTables(v){ saveJSON('sxs_tables',v); }
+function openTableMgrShezhi(){
+  var h='<div style="padding:14px 16px 18px;">'
+    +'<div style="margin-bottom:10px;"><input id="newTableName" placeholder="输入桌台名（如 1桌、2包间，可批量 1-10桌）" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:var(--fs-14);"></div>'
+    +'<button onclick="addTableShezhi()" style="width:100%;padding:11px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:var(--fs-14);font-weight:600;margin-bottom:12px;">＋ 添加桌台</button>'
+    +'<div id="tableListShezhi"></div>'
+    +'</div>';
+  showOverlay('🪑 桌台管理', h);
+  renderTableListShezhi();
+}
+function renderTableListShezhi(){
+  var el=document.getElementById('tableListShezhi'); if(!el) return;
+  var tables=getTables();
+  if(!tables||!tables.length){ el.innerHTML='<div style="color:var(--text-m);font-size:var(--fs-14);padding:8px 0;">暂无桌台</div>'; return; }
+  var h='';
+  tables.forEach(function(t){
+    h+='<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">'
+      +'<span id="tls_'+t.id+'">'+(t.name||t.id)+(t.status==='open'?' (开台)':'')+'</span>'
+      +'<span><button onclick="startRenameTableShezhi(\''+t.id+'\')" style="border:none;background:var(--brand-light);color:var(--brand);border-radius:8px;padding:5px 10px;margin-right:6px;cursor:pointer;font-family:inherit;">✎</button>'
+      +'<button onclick="deleteTableByIdShezhi(\''+t.id+'\')" style="'+(t.status==='open'?'visibility:hidden;':'border:none;background:#fde8e8;color:#e23b3b;')+'border-radius:8px;padding:5px 10px;cursor:pointer;font-family:inherit;">×</button></span>'
+      +'</div>';
+  });
+  el.innerHTML=h;
+}
+function parseTableNames(raw){
+  var out=[];
+  raw.split(/[,，\s]+/).forEach(function(part){
+    part=part.trim(); if(!part) return;
+    var m=part.match(/^(\d+)\s*[-~到]\s*(\d+)\s*(桌|号|包|包间|)$/);
+    if(m){ var a=+m[1], b=+m[2], suf=m[3]||'桌'; if(b>a && b-a<=50){ for(var i=a;i<=b;i++) out.push(i+suf); } return; }
+    out.push(part);
+  });
+  return out;
+}
+function addTableShezhi(){
+  var inp=document.getElementById('newTableName'); if(!inp) return;
+  var raw=inp.value.trim(); if(!raw){ toast('请输入桌台名称'); return; }
+  var tables=getTables(); if(!Array.isArray(tables)) tables=[];
+  var names=parseTableNames(raw), added=0;
+  var existed=tables.map(function(t){ return (t.name||'').trim(); });
+  names.forEach(function(nm){
+    if(existed.indexOf(nm)>=0) return;
+    tables.push({id:'t'+Date.now()+'_'+(added++), name:nm, order:[], status:'empty', openAt:null});
+    existed.push(nm);
+  });
+  if(added===0){ toast(names.length? '桌台已存在' : '请输入桌台名称'); return; }
+  saveTables(tables); inp.value='';
+  renderTableListShezhi();
+  toast('已添加 '+added+' 个桌台');
+}
+function deleteTableByIdShezhi(id){
+  var tables=getTables(), t=tables.find(function(x){return x.id===id;});
+  if(t&&t.status==='open'){toast('开台中的桌台无法删除');return;}
+  if(!confirm('确定删除？')) return;
+  saveTables(tables.filter(function(x){return x.id!==id;})); renderTableListShezhi();
+}
+function startRenameTableShezhi(id){
+  var tables=getTables(), t=tables.find(function(x){return x.id===id;}); if(!t) return;
+  var el=document.getElementById('tls_'+id); if(!el) return;
+  var oldName=t.name||id;
+  el.innerHTML='<input id="tlsinput_'+id+'" value="'+oldName.replace(/"/g,'&quot;')+'" onblur="finishRenameTableShezhi(\''+id+'\')" onkeydown="if(event.key===\'Enter\')finishRenameTableShezhi(\''+id+'\')" style="padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-14);">';
+  var inp=document.getElementById('tlsinput_'+id); if(inp){inp.focus();inp.select();}
+}
+function finishRenameTableShezhi(id){
+  var inp=document.getElementById('tlsinput_'+id), newName=inp?inp.value.trim():''; if(!newName){ renderTableListShezhi(); return; }
+  var tables=getTables(), t=tables.find(function(x){return x.id===id;}); if(!t) return;
+  t.name=newName; saveTables(tables); renderTableListShezhi();
+}
+
+function clearData(){
+  // 入口统一走密码确认（保留旧名，外部若调用亦安全）
+  requestClearData('all');
+}
+function doClearData(){
+  if(!_hasDataPerm()){ toast('无数据管理权限',false); return; }
+  if(!confirm('⚠️ 确定清空所有数据？此操作不可恢复！')) return;
+  if(!confirm('再次确认：真的要清空吗？')) return;
+  var keys = [];
+  for(var i=0;i<localStorage.length;i++){
+    var k = localStorage.key(i);
+    if(k.indexOf('sxs_')===0 || k.indexOf('sp_')===0) keys.push(k);
+  }
+  keys.forEach(function(k){ localStorage.removeItem(k); });
+  localStorage.removeItem('sxs_current_user');
+  toast('数据已清空', true);
+  setTimeout(function(){ location.href='index.html'; }, 1500);
+}
+
+// 仅清空采购订单/入库记录/消息/日志，保留商品与库存，方便重新走流程
+function clearPurchaseOrders(){
+  requestClearData('purchase');
+}
+function doClearPurchaseOrders(){
+  if(!_hasDataPerm()){ toast('无数据管理权限',false); return; }
+  if(!confirm('确定清空所有采购订单和入库记录吗？\n商品库和库存不受影响，可重新走流程。')) return;
+  ['sxs_purchase_orders','sxs_purchase_records','sxs_notifications','sxs_logs'].forEach(function(k){
+    try{ localStorage.removeItem(k); }catch(e){}
+  });
+  toast('已清空采购订单，可重新走流程', true);
+  try{ if(typeof updateOrderRecordBadge==='function') updateOrderRecordBadge(); }catch(e){}
+  try{ if(typeof updateKcReceiveBadge==='function') updateKcReceiveBadge(); }catch(e){}
+  try{ if(typeof renderReceiveRecords==='function') renderReceiveRecords(); }catch(e){}
+}
+
+function editShopInfo(){
+  var name = prompt('店铺名称：', localStorage.getItem('sxs_shop_name')||'');
+  if(name){
+    localStorage.setItem('sxs_shop_name', name);
+    document.getElementById('shopNameDisplay').textContent = name;
+    toast('已更新', true);
+  }
+}
+
+// 消息通知已停用（2026-07-11）：相关函数移除，改由业务入口红点提醒
+
+// ═══════════ 采购流程开关 ═══════════
+function loadFlowSettings(){
+  var flow = getPurchaseFlow();
+  var el1 = document.getElementById('flowChefReview');
+  var el2 = document.getElementById('flowBossReview');
+  if(el1) el1.checked = flow.chefReview || false;
+  if(el2) el2.checked = flow.bossReview || false;
+  updateFlowSummary();
+}
+
+function updateFlowSummary(){
+  var f1 = document.getElementById('flowChefReview');
+  var f2 = document.getElementById('flowBossReview');
+  var chefOn = f1 && f1.checked;
+  var bossOn = f2 && f2.checked;
+  var parts = [];
+  parts.push('仓管→采购员');
+  if(bossOn) parts[0] = '仓管→厨师长→老板→采购员';
+  else if(chefOn) parts[0] = '仓管→厨师长→采购员';
+  if(chefOn) parts.push('厨师长审核 ✓');
+  if(bossOn) parts.push('老板审批 ✓');
+  document.getElementById('flowSummary').textContent = parts.join(' · ') || '直接采购（无审核）';
+}
+
+function openFlowModal(){
+  document.getElementById('flowModal').classList.add('show');
+}
+
+function closeFlowModal(){
+  document.getElementById('flowModal').classList.remove('show');
+}
+
+function onFlowChange(){
+  var flow = {
+    chefReview: document.getElementById('flowChefReview').checked,
+    bossReview: document.getElementById('flowBossReview').checked
+  };
+  savePurchaseFlow(flow);
+  updateFlowSummary();
+  addLog('flow_change', '采购流程：厨师长审核='+(flow.chefReview?'开':'关')+' 老板审批='+(flow.bossReview?'开':'关'), 'settings');
+}
+
+// 点击遮罩关闭弹窗
+document.getElementById('memberModal').addEventListener('click', function(e){
+  if(e.target===this) closeMemberModal();
+});
+document.getElementById('flowModal').addEventListener('click', function(e){
+  if(e.target===this) closeFlowModal();
+});
+
+// ═══════════ 修改密码（所有登录角色可用）═══════════
+function changeMyPwd(){
+  var me = (typeof getCurrentUser==='function') ? getCurrentUser() : null;
+  if(!me){ toast('请先登录', false); return; }
+  var oldP = document.getElementById('oldPwd').value;
+  var np = document.getElementById('newPwd').value;
+  var cp = document.getElementById('confirmPwd').value;
+  if(!np){ toast('请输入新密码', false); return; }
+  if(np.length < 4){ toast('新密码至少4位', false); return; }
+  if(np !== cp){ toast('两次输入的新密码不一致', false); return; }
+  if(hasPwd(me.id)){
+    if(!checkPwd(me.id, oldP)){ toast('原密码错误', false); return; }
+  }
+  setPwd(me.id, np);
+  toast('密码已修改，下次登录请用新密码', true);
+  document.getElementById('oldPwd').value='';
+  document.getElementById('newPwd').value='';
+  document.getElementById('confirmPwd').value='';
+  closePwdModal();
+}
+function openPwdModal(){
+  var m=document.getElementById('pwdModal'); if(m) m.classList.add('show');
+}
+function closePwdModal(){
+  var m=document.getElementById('pwdModal'); if(m) m.classList.remove('show');
+}
+
+// ═══════════ 页面初始化（必须放在所有函数/变量定义之后执行）═══════════
+(function init(){
+  // 容错：当前登录身份记录轻微错乱（编号对不上）时，自动回退到第一个老板并修复，
+  // 避免「我的」页面误判非老板而隐藏「团队成员/角色管理」。
+  var me = null;
+  try { me = (typeof getCurrentUser==='function') ? getCurrentUser() : null; } catch(e) { me = null; }
+  if(!me){
+    var all = (typeof getUsers==='function') ? getUsers() : [];
+    var boss = all.find(function(u){ return u.role==='boss'; });
+    if(boss){ me = boss; try{ if(typeof setCurrentUser==='function') setCurrentUser(boss.id); }catch(e){} }
+  }
+  try { updateUserUI(); } catch(e) {}
+  if(me && me.role==='boss'){
+    var ts = document.getElementById('teamSection');
+    var fs = document.getElementById('flowSection');
+    if(ts) ts.style.display='block';
+    if(fs) fs.style.display='block';
+    try{ renderMemberList(); }catch(e){}
+    try{ loadFlowSettings(); }catch(e){}
+  }
+  renderBottomNav('shezhi');
+  try{ updateNotifBell(); }catch(e){}
+  // 消息管理开关初始状态（默认开启）
+  try{
+    var _ne = localStorage.getItem('sxs_notif_enabled'); if(_ne!=='0') _ne='1';
+    var _mt = document.getElementById('msgEnabledToggle');
+    if(_mt) _mt.checked = (_ne==='1');
+  }catch(e){}
+  // AI助手悬浮图标开关初始状态（默认开启）
+  try{
+    var _afe = localStorage.getItem('sxs_ai_fab_enabled'); if(_afe!=='0') _afe='1';
+    var _at = document.getElementById('aiFabToggleShezhi');
+    if(_at) _at.checked = (_afe==='1');
+  }catch(e){}
+  document.getElementById('shopNameDisplay').textContent = localStorage.getItem('sxs_shop_name')||'未设置';
+})();
+
+// ═══════════ 美团销售数据导入 ═══════════
+var mtRows = [];      // 解析后的数据行（不含表头）
+var mtHeaders = [];   // 表头
+var mtMap = {};       // {name:列序号, qty:列序号, amount:列序号, date:列序号}
+
+function mtEsc(s){ return String(s==null?'':s).replace(/[&<>"]/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+
+function openMeituanImport(){
+  if(typeof _hasDataPerm==='function' && !_hasDataPerm()){ toast('无数据管理权限',false); return; }
+  mtRows=[]; mtHeaders=[]; mtMap={};
+  document.getElementById('mtPrev').innerHTML='';
+  document.getElementById('mtMap').innerHTML='';
+  document.getElementById('mtActions').style.display='none';
+  document.getElementById('mtFile').value='';
+  document.getElementById('mtFileLabel').textContent='📁 点击选择 CSV 文件';
+  document.getElementById('mtMask').classList.add('show');
+}
+function closeMeituanImport(){ document.getElementById('mtMask').classList.remove('show'); }
+
+// 简易 CSV 解析（支持双引号包裹字段、逗号分隔、\n 换行）
+function mtParseCSV(text){
+  var rows=[], row=[], field='', inQ=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){ field+='"'; i++; } else inQ=false; }
+      else field+=c;
+    } else {
+      if(c==='"') inQ=true;
+      else if(c===','){ row.push(field); field=''; }
+      else if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+      else if(c==='\r'){ /* 跳过 */ }
+      else field+=c;
+    }
+  }
+  if(field!==''||row.length){ row.push(field); rows.push(row); }
+  return rows.filter(function(r){ return r.length>1 || (r.length===1 && r[0].trim()!==''); });
+}
+
+function mtOnFile(input){
+  var file=input.files[0]; if(!file) return;
+  document.getElementById('mtFileLabel').textContent='📄 '+file.name;
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    var rows=mtParseCSV(String(ev.target.result||''));
+    if(rows.length<2){ toast('文件没有数据行',false); return; }
+    mtHeaders=rows[0].map(function(h,i){ return (h||('列'+(i+1))).trim(); });
+    mtRows=rows.slice(1);
+    mtRenderPrev(rows);
+    mtAutoMap();
+    mtRenderMap();
+    document.getElementById('mtActions').style.display='flex';
+  };
+  reader.readAsText(file);
+}
+
+function mtRenderPrev(rows){
+  var head=rows[0], body=rows.slice(1,6);
+  var h='<table><thead><tr>'+head.map(function(hh){ return '<th>'+mtEsc(String(hh||''))+'</th>'; }).join('')+'</tr></thead><tbody>';
+  body.forEach(function(r){ h+='<tr>'+head.map(function(_,i){ return '<td>'+(r[i]!==undefined?mtEsc(String(r[i])):'')+'</td>'; }).join('')+'</tr>'; });
+  h+='</tbody></table>';
+  document.getElementById('mtPrev').innerHTML=h;
+}
+
+function mtAutoMap(){
+  mtMap={};
+  mtHeaders.forEach(function(h,i){
+    var s=h.toLowerCase();
+    if(/菜|品名|商品|名称|name/.test(s) && mtMap.name===undefined) mtMap.name=i;
+    else if(/数量|份数|qty|num|count/.test(s) && mtMap.qty===undefined) mtMap.qty=i;
+    else if(/金额|实收|销售|收入|总额|amount|price|fee/.test(s) && mtMap.amount===undefined) mtMap.amount=i;
+    else if(/日期|时间|date|day|time/.test(s) && mtMap.date===undefined) mtMap.date=i;
+  });
+}
+
+function mtRenderMap(){
+  var fields=[['name','菜品名称'],['qty','数量'],['amount','金额'],['date','日期']];
+  var h=fields.map(function(f){
+    var opts='<option value="-1">— 忽略 —</option>';
+    mtHeaders.forEach(function(hh,hi){ opts+='<option value="'+hi+'"'+(mtMap[f[0]]===hi?' selected':'')+'>'+mtEsc(hh)+'</option>'; });
+    return '<div class="mt-map-row"><span style="width:64px">'+f[1]+'</span><select data-f="'+f[0]+'" onchange="mtSelMap(this)">'+opts+'</select></div>';
+  }).join('');
+  document.getElementById('mtMap').innerHTML=h;
+}
+function mtSelMap(sel){ mtMap[sel.getAttribute('data-f')]=parseInt(sel.value,10); }
+
+function mtNum(v){
+  if(v===undefined||v===null) return 0;
+  var s=String(v).replace(/[¥$,\s]/g,'');
+  var n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+
+function mtConfirmImport(){
+  if(mtMap.name===undefined || mtMap.name<0){ toast('请先选择「菜品名称」对应列',false); return; }
+  var list=loadJSON('sxs_meituan_sales')||[];
+  var added=0;
+  mtRows.forEach(function(r){
+    var name=(r[mtMap.name]||'').trim();
+    if(!name) return;
+    list.push({
+      date: mtMap.date>=0 ? (r[mtMap.date]||'') : '',
+      name: name,
+      qty: mtMap.qty>=0 ? mtNum(r[mtMap.qty]) : 0,
+      amount: mtMap.amount>=0 ? mtNum(r[mtMap.amount]) : 0,
+      importedAt: new Date().toISOString().slice(0,10)
+    });
+    added++;
+  });
+  saveJSON('sxs_meituan_sales', list);
+  closeMeituanImport();
+  toast('已导入 '+added+' 条美团销售记录', true);
+}
+
+function viewMeituanSales(){
+  var list=loadJSON('sxs_meituan_sales')||[];
+  document.getElementById('mtViewCount').textContent= list.length ? ('共 '+list.length+' 条已导入记录') : '还没有导入记录';
+  if(!list.length){ document.getElementById('mtViewList').innerHTML='<div class="mt-empty">暂无数据，去「导入美团销售数据」上传吧</div>'; }
+  else {
+    var h='<table><thead><tr><th>日期</th><th>菜品</th><th>数量</th><th>金额</th></tr></thead><tbody>';
+    list.slice().reverse().forEach(function(r){ h+='<tr><td>'+mtEsc(r.date||'')+'</td><td>'+mtEsc(r.name||'')+'</td><td>'+fmt0(r.qty||0)+'</td><td>¥'+fmt0(r.amount||0)+'</td></tr>'; });
+    h+='</tbody></table>';
+    document.getElementById('mtViewList').innerHTML=h;
+  }
+  document.getElementById('mtViewMask').classList.add('show');
+}
+function closeViewMeituan(){ document.getElementById('mtViewMask').classList.remove('show'); }
+</script>
+
+<!-- 美团销售数据导入弹窗 -->
+<div class="mt-mask" id="mtMask">
+  <div class="mt-panel">
+    <span class="mt-close" onclick="closeMeituanImport()">×</span>
+    <div class="mt-title">导入美团销售数据</div>
+    <div class="mt-tip">请先在美团商家后台把「销售明细 / 账单」导出为 CSV，再上传。上传后系统会让您把每一列对应到 菜品 / 数量 / 金额 / 日期，确认后导入。</div>
+    <input type="file" id="mtFile" accept=".csv,text/csv" style="display:none" onchange="mtOnFile(this)">
+    <label class="mt-file" for="mtFile" id="mtFileLabel">📁 点击选择 CSV 文件</label>
+    <div id="mtPrev" class="mt-prev"></div>
+    <div id="mtMap" class="mt-map"></div>
+    <div class="mt-actions" id="mtActions" style="display:none">
+      <button class="mt-btn-cancel" onclick="closeMeituanImport()">取消</button>
+      <button class="mt-btn-ok" onclick="mtConfirmImport()">确认导入</button>
+    </div>
+  </div>
+</div>
+<!-- 美团销售数据查看弹窗 -->
+<div class="mt-mask" id="mtViewMask">
+  <div class="mt-panel">
+    <span class="mt-close" onclick="closeViewMeituan()">×</span>
+    <div class="mt-title">已导入美团销售</div>
+    <div class="mt-tip" id="mtViewCount"></div>
+    <div id="mtViewList" class="mt-prev"></div>
+  </div>
+</div>
+</body>
+</html>
