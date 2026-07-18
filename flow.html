@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>餐小算 · AI经营助手</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  /* ── 字体缩放变量 (小/中/大) ── */
+  --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+  --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+  --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px; --fs-26:26px;
+  --fs-28:28px; --fs-30:30px; --fs-36:36px;
+
+  --brand: #534AB7; --brand-light: #EEEDFE; --brand-mid: #7F77DD;
+  --bg: #f3f2ef; --white: #fff; --text: #1a1a1a;
+  --text-s: #555; --text-m: #777; --border: rgba(0,0,0,0.1);
+  --radius: 16px; --green: #27ae60; --red: #e74c3c;
+}
+ body {font-weight:600;font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px 20px;
+}
+.logo-area { text-align: center; margin-bottom: 28px; }
+.logo {
+  width: 60px; height: 60px;
+  background: var(--brand); border-radius: 16px;
+  display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px;
+}
+.logo svg { width: 32px; height: 32px; }
+.logo-name { font-size: 24px; font-weight: 700; color: var(--text); }
+.logo-name span { color: var(--brand); }
+.logo-slogan { font-size: 13px; color: var(--text-m); margin-top: 4px; }
+
+.section-title { font-size: 14px; font-weight: 500; color: var(--text-s); margin-bottom: 14px; text-align: center; }
+
+/* 用户列表 */
+.user-list { width: 100%; max-width: 360px; }
+.user-card {
+  background: var(--white); border-radius: 14px; padding: 16px 18px;
+  margin-bottom: 10px; cursor: pointer; display: flex; align-items: center;
+  gap: 12px; border: 2px solid transparent; transition: all .15s;
+}
+.user-card:hover { border-color: var(--brand-mid); transform: translateY(-1px); }
+.user-card.active { border-color: var(--brand); background: var(--brand-light); }
+.user-avatar {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.user-avatar.boss { background: #fff3e0; }
+.user-avatar.chef { background: #fff8e1; }
+.user-avatar.manager { background: #e3f2fd; }
+.user-avatar.buyer { background: #e8f5e9; }
+.user-avatar.keeper { background: #fce4ec; }
+.user-avatar.waiter { background: #f3e5f5; }
+.user-info { flex:1; min-width:0; }
+.user-name { font-size: 15px; font-weight: 600; }
+.user-role { font-size: 11px; color: var(--brand-mid); margin-top: 2px; }
+.user-badge {
+  font-size: 11px; padding: 3px 10px; border-radius: 10px; font-weight: 500;
+  flex-shrink: 0;
+}
+.user-badge.boss { background: #fff3e0; color: #e65100; }
+.user-badge.chef { background: #fff8e1; color: #e65100; }
+.user-badge.manager { background: #e3f2fd; color: #1565c0; }
+.user-badge.buyer { background: #e8f5e9; color: #2e7d32; }
+.user-badge.keeper { background: #fce4ec; color: #c62828; }
+.user-badge.waiter { background: #f3e5f5; color: #6a1b9a; }
+
+.enter-btn {
+  width: 100%; max-width: 360px;
+  background: var(--brand); color: #fff; border: none;
+  border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 600;
+  cursor: pointer; margin-top: 16px; font-family: inherit;
+}
+.enter-btn:hover { opacity: .9; }
+.enter-btn:disabled { background: #ccc; cursor: not-allowed; }
+
+.admin-link { margin-top: 16px; font-size: 13px; color: var(--brand); cursor: pointer; text-align: center; }
+
+.footer-note { font-size: 12px; color: var(--text-m); text-align: center; margin-top: 20px; }
+
+/* 首次设置面板 */
+.setup-panel { width: 100%; max-width: 360px; }
+.setup-form { background:var(--white); border-radius:14px; padding:20px 18px; margin-bottom:14px; }
+.setup-form label { display:block; font-size:var(--fs-15); color:var(--text-s); font-weight:600; margin-bottom:6px; }
+.setup-form input {
+  width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px;
+  font-size:var(--fs-15); font-family:inherit; margin-bottom:14px; background:#fafafa;
+}
+
+.hidden { display: none !important; }
+
+.toast {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: var(--green); color: #fff; padding: 10px 24px;
+  border-radius: 20px; font-size: 13px; z-index: 100;
+  opacity: 0; transition: opacity .3s;
+}
+.toast.show { opacity: 1; }
+
+/* 餐厅类型选择 */
+.type-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px; }
+.type-card {
+  background:var(--white); border-radius:14px; padding:20px 14px; cursor:pointer;
+  text-align:center; border:2.5px solid transparent; transition:all .15s;
+}
+.type-card:active { transform:scale(.97); }
+.type-card.active { border-color:var(--brand); background:var(--brand-light); }
+.type-card .tc-icon { font-size:var(--fs-36); margin-bottom:8px; }
+.type-card .tc-name { font-size:var(--fs-15); font-weight:600; color:var(--text); }
+.type-card .tc-desc { font-size:var(--fs-14); color:var(--text-m); margin-top:4px; line-height:1.4; }
+</style>
+
+<script>
+/* ═══ 字体缩放 小/中/大 ═══ */
+(function(){
+  var KEY = 'sxs_font_size';
+  var cur = localStorage.getItem(KEY) || 'small';
+  document.documentElement.setAttribute('data-font-size', cur);
+  window.getFontSize = function(){ return localStorage.getItem(KEY)||'small'; };
+  window.setFontSize = function(lv){
+    if(['small','medium','large'].indexOf(lv)<0) return;
+    localStorage.setItem(KEY, lv);
+    document.documentElement.setAttribute('data-font-size', lv);
+    window.dispatchEvent(new Event('resize'));
+  };
+})();
+</script>
+
+</head>
+<body>
+
+<div class="logo-area">
+  <div class="logo">
+    <svg viewBox="0 0 36 36" fill="none"><rect x="6" y="10" width="24" height="3" rx="1.5" fill="white" opacity=".9"/><rect x="6" y="17" width="18" height="3" rx="1.5" fill="white" opacity=".7"/><rect x="6" y="24" width="12" height="3" rx="1.5" fill="white" opacity=".5"/><circle cx="28" cy="25.5" r="5" fill="white" opacity=".9"/><path d="M25.5 25.5L27.2 27.2L30.5 23.8" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </div>
+  <div class="logo-name"><span>餐小算</span></div>
+  <div class="logo-slogan">有餐小算，做生意才省心</div>
+</div>
+
+<!-- 已有用户 → 选人登录 -->
+<div id="loginPanel">
+  <div class="section-title">选择你的账号</div>
+  <div class="user-list" id="userList"></div>
+  <div class="login-pwd" id="loginPwdWrap" style="display:none;">
+    <input type="password" id="loginPwd" placeholder="请输入密码" style="width:100%;padding:12px;border:1px solid #e3e3e8;border-radius:10px;font-size:15px;margin-top:10px;box-sizing:border-box;" oninput="clearLoginErr()">
+  </div>
+  <div class="login-err" id="loginErr" style="display:none;color:#e34d4d;font-size:13px;margin-top:8px;text-align:center;"></div>
+  <button class="enter-btn" id="loginBtn" onclick="doLogin()" disabled>进入餐小算 →</button>
+  <div class="admin-link" onclick="showSetup()">⚙️ 管理员设置</div>
+</div>
+
+  <!-- 首次设置 / 管理员模式 -->
+  <div id="setupPanel" class="hidden">
+    <!-- 店铺信息 -->
+    <div id="stepForm">
+    <div class="section-title">🏪 初始化你的店铺</div>
+    <div class="setup-panel">
+      <div class="setup-form">
+        <label>店铺名称</label>
+        <input type="text" id="shopName" value="餐小算川菜馆" placeholder="如：老王川菜馆">
+        <label>你的姓名</label>
+        <input type="text" id="bossName" value="老板" placeholder="如：王建国">
+        <label>登录密码</label>
+        <input type="password" id="bossPwd" placeholder="设置老板登录密码" style="width:100%;padding:12px;border:1px solid #e3e3e8;border-radius:10px;font-size:15px;margin-top:4px;box-sizing:border-box;">
+      </div>
+      <button class="enter-btn" onclick="doSetup()">创建店铺，开始使用 →</button>
+      <div class="admin-link" onclick="backToType()">← 返回选类型</div>
+      <div class="admin-link" id="backToLogin" onclick="showLogin()" style="display:none;">← 返回选人</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">免费使用 · 无需下载 · 数据安全加密</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="gongxiang.js?v=20260715g"></script>
+<script>
+// ── 工具 ──
+function L(k){ try{ var d=localStorage.getItem(k); return d?JSON.parse(d):[]; }catch(e){ return[]; } }
+
+var selectedUserId = null;
+var selectedShopType = 'chaocai';
+
+// 判断是首次使用还是有用户的（调用放到脚本末尾，确保 roleNames/roleBadges 已定义）
+function init(){
+  var users = L('sxs_users');
+  if(users.length > 0){
+    showLogin();
+  } else {
+    showSetup();
+  }
+}
+
+function showLogin(){
+  document.getElementById('loginPanel').classList.remove('hidden');
+  document.getElementById('setupPanel').classList.add('hidden');
+  if(document.getElementById('backToLogin')) document.getElementById('backToLogin').style.display='none';
+  var wrap=document.getElementById('loginPwdWrap'); if(wrap) wrap.style.display='none';
+  var err=document.getElementById('loginErr'); if(err){err.style.display='none';err.textContent='';}
+  renderUserList();
+}
+
+function showSetup(){
+  document.getElementById('loginPanel').classList.add('hidden');
+  document.getElementById('setupPanel').classList.remove('hidden');
+  var users = L('sxs_users');
+  // 直接显示店铺信息表单（经营类型在菜单页按需添加）
+  document.getElementById('stepForm').classList.remove('hidden');
+  // 回登录按钮：仅已有用户时显示
+  var backLink = document.getElementById('backToLogin');
+  if(backLink) backLink.style.display = users.length > 0 ? 'block' : 'none';
+}
+
+function selectShopType(type){
+  selectedShopType = type;
+  document.getElementById('typeChaocai').classList.toggle('active', type==='chaocai');
+  document.getElementById('typeTaocan').classList.toggle('active', type==='taocan');
+  // 更新默认店铺名
+  var shopInput = document.getElementById('shopName');
+  if(type==='taocan'){
+    if(shopInput.value==='餐小算川菜馆') shopInput.value='餐小算快餐店';
+  } else {
+    if(shopInput.value==='餐小算快餐店') shopInput.value='餐小算川菜馆';
+  }
+}
+
+function toStepForm(){
+  document.getElementById('stepType').classList.add('hidden');
+  document.getElementById('stepForm').classList.remove('hidden');
+}
+
+function backToType(){
+  document.getElementById('stepType').classList.remove('hidden');
+  document.getElementById('stepForm').classList.add('hidden');
+}
+
+var roleNames = { boss:'👔 老板', chef:'👨‍🍳 厨师长', manager:'🏪 店长', buyer:'🛒 采购员', keeper:'📦 仓管', waiter:'🍽️ 点菜员' };
+var roleBadges = { boss:'管理员', chef:'厨师长', manager:'店长', buyer:'采购员', keeper:'仓管', waiter:'点菜员' };
+
+function renderUserList(){
+  var users = L('sxs_users');
+  var h='';
+  users.forEach(function(u){
+    var cls = 'user-card' + (selectedUserId===u.id ? ' active' : '');
+    h += '<div class="'+cls+'" onclick="selectUser(\''+u.id+'\')">'+
+      '<div class="user-avatar '+u.role+'">'+(roleNames[u.role]||'👤').slice(0,2)+'</div>'+
+      '<div class="user-info">'+
+        '<div class="user-name">'+u.name+'</div>'+
+        '<div class="user-role">'+roleNames[u.role]+'</div>'+
+      '</div>'+
+      '<div class="user-badge '+u.role+'">'+(roleBadges[u.role]||'')+'</div>'+
+    '</div>';
+  });
+  document.getElementById('userList').innerHTML = h;
+  document.getElementById('loginBtn').disabled = !selectedUserId;
+}
+
+function selectUser(id){
+  selectedUserId = id;
+  renderUserList();
+  document.getElementById('loginBtn').disabled = false;
+  var wrap=document.getElementById('loginPwdWrap');
+  if(wrap) wrap.style.display='block';
+  var inp=document.getElementById('loginPwd');
+  if(inp){ inp.value=''; inp.placeholder = hasPwd(id) ? '请输入密码' : '首次使用，请设置登录密码'; }
+  clearLoginErr();
+}
+
+function doLogin(){
+  if(!selectedUserId) return;
+  var users = L('sxs_users');
+  var u = users.find(function(x){return x.id===selectedUserId;});
+  if(!u) return;
+  var pwd = (document.getElementById('loginPwd').value||'');
+  if(hasPwd(u.id)){
+    if(!checkPwd(u.id, pwd)){ showLoginErr('密码错误，请重试'); return; }
+  } else {
+    // 无密码老用户：首次登录即设置密码（全部角色必须设密码）
+    if(!pwd){ showLoginErr('请输入要设置的登录密码'); return; }
+    setPwd(u.id, pwd);
+  }
+  localStorage.setItem('sxs_current_user', u.id);
+  // 按角色跳转：点菜相关角色进点菜主页(menu_new.html)，后厨进报表，采购/仓管各进各页
+  if(u.role==='waiter' || u.role==='boss' || u.role==='manager') location.href = 'menu_new.html';
+  else if(u.role==='buyer') location.href = 'caigou.html';
+  else if(u.role==='keeper') location.href = 'kucun.html';
+  else if(u.role==='chef') location.href = 'catering.html';
+  else location.href = 'menu_new.html';
+}
+
+function doSetup(){
+  var shop = document.getElementById('shopName').value.trim() || '餐小算川菜馆';
+  var bossName = document.getElementById('bossName').value.trim() || '老板';
+  var bossPwd = document.getElementById('bossPwd').value || '';
+  if(!bossPwd){ toast('请设置老板登录密码', false); return; }
+  localStorage.setItem('sxs_shop_name', shop);
+  // 经营类型默认炒菜点菜（可在菜单页按需添加套餐等模式）
+  localStorage.setItem('sxs_shop_type', 'chaocai');
+
+  var users = L('sxs_users');
+  // 找是否已有boss
+  var existingBoss = users.find(function(u){return u.role==='boss';});
+  if(!existingBoss){
+    // 首次初始化：创建boss用户并直接登录（密码已存入 bossPwd，不走 doLogin 避免读错输入框）
+    var boss = { id:'u_boss_001', name: bossName, role:'boss', active:true, createdAt:new Date().toISOString().slice(0,10), password: pwdEncode(bossPwd) };
+    users.push(boss);
+    localStorage.setItem('sxs_users', JSON.stringify(users));
+    localStorage.setItem('sxs_current_user', boss.id);
+    location.href = 'menu_new.html';
+    return;
+  } else {
+    // 管理员设置：保存后返回登录页
+    toast('设置已保存');
+    setTimeout(function(){ showLogin(); }, 800);
+  }
+}
+
+function showLoginErr(msg){ var e=document.getElementById('loginErr'); if(e){ e.textContent=msg; e.style.display='block'; } }
+function clearLoginErr(){ var e=document.getElementById('loginErr'); if(e){ e.style.display='none'; e.textContent=''; } }
+
+// Toast
+function toast(msg, ok){
+  var t=document.getElementById('toast'); if(!t) return;
+  t.textContent=(ok===false?'❌ ':ok===true?'✅ ':'')+msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2000);
+}
+
+// 所有变量/函数定义完毕后，再启动初始化
+init();
+</script>
+</body>
+</html>
