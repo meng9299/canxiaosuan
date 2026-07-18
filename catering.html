@@ -1,0 +1,1125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>餐小算 · 经营报表</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  /* ── 字体缩放变量 (小/中/大) ── */
+  --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+  --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+  --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px; --fs-26:26px;
+  --fs-28:28px; --fs-30:30px; --fs-36:36px;
+
+  --brand:#534AB7; --brand-light:#EEEDFE; --brand-mid:#7F77DD;
+  --bg:#f3f2ef; --white:#fff; --text:#1a1a1a; --text-s:#555; --text-m:#777;
+  --border:rgba(0,0,0,0.1); --radius:14px;
+  --red:#e74c3c; --green:#27ae60; --orange:#f39c12;
+}
+ body {font-weight:600;font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); max-width:420px; margin:0 auto; padding-bottom:80px; }
+
+/* 顶栏 */
+.topbar { display:flex; align-items:center; padding:12px 16px; background:var(--white); position:sticky; top:0; z-index:20; gap:10px; border-bottom:1px solid var(--border); }
+.tb-title { font-size:var(--fs-16); font-weight:700; flex:1; }
+.tb-notif { font-size:var(--fs-20); cursor:pointer; position:relative; }
+.tb-notif sup { font-size:var(--fs-10); background:var(--red); color:#fff; padding:1px 5px; border-radius:8px; position:relative; top:-6px; }
+
+/* Tab栏 */
+.tab-bar { display:flex; background:var(--white); padding:4px 16px 0; position:sticky; top:49px; z-index:15; border-bottom:1px solid var(--border); overflow-x:auto; scrollbar-width:none; gap:4px; }
+.tab-bar::-webkit-scrollbar{display:none;}
+.tab-item { padding:12px 16px; font-size:var(--fs-14); font-weight:600; cursor:pointer; color:var(--text-s); border-bottom:2px solid transparent; white-space:nowrap; flex-shrink:0; transition:all .15s; }
+.tab-item.active { color:var(--brand); border-bottom-color:var(--brand); font-weight:600; }
+
+/* 时间筛选 */
+.time-filter { display:flex; padding:10px 16px 0; gap:6px; }
+.tf-btn { flex:1; padding:8px 0; border-radius:16px; border:1px solid var(--border); background:var(--white); font-size:var(--fs-14); cursor:pointer; font-family:inherit; font-weight:600; color:var(--text-s); text-align:center; transition:all .15s; }
+.tf-btn.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+
+/* 汇总卡片 */
+.summary-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:12px 16px 0; }
+.sum-card { background:var(--white); border-radius:var(--radius); padding:14px; }
+.sc-label { font-size:var(--fs-15); color:var(--text-m); font-weight:600; }
+.sc-val { font-size:var(--fs-26); font-weight:700; margin:4px 0; }
+.sc-val.income { color:var(--green); }
+.sc-val.expense { color:var(--red); }
+.sc-sub { font-size:var(--fs-14); color:var(--text-m); }
+
+/* 成本率横式 */
+.cost-rate-line { margin:10px 16px; background:var(--white); border-radius:var(--radius); padding:14px; font-size:var(--fs-16); font-weight:700; color:var(--text-s); text-align:center; }
+
+/* 趋势图（简化文字版） */
+.chart-section { margin:0 16px 10px; background:var(--white); border-radius:var(--radius); padding:14px; overflow:hidden; }
+.chart-title { font-size:var(--fs-15); font-weight:600; color:var(--text-s); margin-bottom:10px; }
+.ty-btn{padding:4px 14px;border-radius:6px;cursor:pointer;color:var(--text-m);transition:all .15s;font-weight:600;font-size:var(--fs-15);}
+.ty-btn.active{background:var(--white);color:var(--brand);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,0.08);}
+.chart-row { display:flex; align-items:flex-end; gap:4px; height:110px; }
+.chart-bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; }
+.chart-bar { width:100%; max-width:40px; border-radius:6px 6px 0 0; min-height:4px; transition:height .3s; }
+.chart-bar.inc { background:var(--green); }
+.chart-bar.exp { background:var(--red); }
+.chart-bar.profit { background:var(--brand); }
+.chart-label { font-size:var(--fs-14); color:var(--text-m); margin-top:4px; font-weight:600; }
+.chart-label-row{display:flex;gap:6px;padding-left:0;}
+.chart-label-row .chart-label{width:42px;text-align:center;flex-shrink:0;}
+
+/* 成本结构 */
+.cost-list { margin:0; }
+.cost-item { display:flex; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); }
+.cost-item:last-child{ border-bottom:none; }
+.ci-name { flex:1; font-size:var(--fs-14); }
+.ci-bar-wrap { width:120px; height:10px; background:#f0f0f0; border-radius:5px; margin:0 10px; overflow:hidden; }
+.ci-bar { height:100%; border-radius:5px; transition:width .3s; }
+.ci-val { font-size:var(--fs-14); font-weight:600; width:55px; text-align:right; }
+
+/* ── 仿「库存AI推荐清单」风格：圆角白卡 + 清单行 ── */
+.sx-rec-box{ background:var(--white); border-radius:var(--radius); margin:12px 16px; padding:14px; overflow:hidden; }
+.sx-rec-head{ display:flex; align-items:center; justify-content:space-between; font-weight:700; font-size:var(--fs-15); color:var(--text-s); margin-bottom:8px; }
+.sx-rec-item{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); font-size:var(--fs-15); }
+.sx-rec-item:last-child{ border-bottom:none; }
+.sx-rec-emoji{ font-size:18px; flex:0 0 auto; }
+.sx-rec-name{ flex:1; min-width:0; font-weight:600; }
+.sx-rec-sub{ font-size:var(--fs-13); color:var(--text-m); margin-top:2px; line-height:1.5; }
+.sx-rec-val{ flex:0 0 auto; font-weight:700; font-size:var(--fs-15); }
+.sx-rec-val.good{ color:var(--green); }
+.sx-rec-val.warn{ color:var(--orange); }
+.sx-rec-val.bad{ color:var(--red); }
+
+/* 员工绩效 */
+.perf-card {
+  background:var(--white); border-radius:var(--radius); padding:12px 14px;
+  margin:8px 16px 0; display:flex; align-items:center; gap:10px;
+}
+.perf-rank { width:28px; height:28px; border-radius:50%; background:var(--brand-light); color:var(--brand); display:flex; align-items:center; justify-content:center; font-size:var(--fs-15); font-weight:700; }
+.perf-name { flex:1; font-size:var(--fs-14); font-weight:600; }
+.perf-role { font-size:var(--fs-14); color:var(--text-m); }
+.perf-amt { font-size:var(--fs-15); font-weight:700; color:var(--brand); }
+.perf-count { font-size:var(--fs-14); color:var(--text-m); }
+
+/* 通知抽屉 */
+.drawer-mask{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:30;display:none;}
+.drawer-mask.show{display:block;}
+.drawer{position:fixed;bottom:0;left:50%;width:100%;max-width:420px;background:var(--white);border-radius:18px 18px 0 0;z-index:31;max-height:75vh;display:flex;flex-direction:column;transform:translateX(-50%) translateY(120%);transition:transform .25s;}
+.drawer-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:10px auto 6px;flex-shrink:0;}
+.drawer-title{padding:0 18px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid var(--border);}
+.drawer-title .dt-name{font-size:var(--fs-16);font-weight:700;}
+.drawer-title .dt-close{font-size:var(--fs-22);cursor:pointer;color:var(--text-m);}
+.drawer-body{overflow-y:auto;flex:1;padding:8px 0;}
+.notif-item{padding:12px 18px;border-bottom:1px solid var(--border);cursor:pointer;}
+.notif-item.unread{background:var(--brand-light);}
+.notif-item .ni-title{font-size:var(--fs-14);font-weight:600;}
+.notif-item .ni-msg{font-size:var(--fs-14);color:var(--text-s);margin-top:3px;}
+.notif-item .ni-time{font-size:var(--fs-14);color:var(--text-m);margin-top:4px;}
+.drawer-footer{padding:10px 18px 16px;border-top:1px solid var(--border);flex-shrink:0;text-align:center;}
+.drawer-footer button{background:none;border:none;color:var(--text-s);font-size:var(--fs-14);cursor:pointer;font-family:inherit;}
+
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:12px 28px;border-radius:20px;font-size:var(--fs-14);z-index:100;opacity:0;transition:opacity .3s;}
+.toast.show{opacity:1;}
+
+/* 底部导航 */
+.bottom-nav{position:fixed;bottom:0;left:50%;-webkit-transform:translateX(-50%); transform:translateX(-50%);width:100%;max-width:420px;background:var(--white);border-top:1px solid var(--border);display:flex;padding-bottom: env(safe-area-inset-bottom, 4px); z-index: 50;}
+.nav-item{font-weight:600;flex:1;text-align:center;padding:8px 0 6px;font-size:var(--fs-15);color:var(--text-m);cursor:pointer;text-decoration:none;}
+.nav-item.active{color:var(--brand);font-weight:600;}
+.nav-item .n-icon{font-size:var(--fs-20);display:block;margin-bottom:2px;}
+
+/* 无数据提示 */
+.no-data{text-align:center;padding:30px 0;color:var(--text-m);font-size:var(--fs-14);}
+.export-btn{padding:10px 20px;border:1px solid var(--border);border-radius:16px;background:var(--white);font-size:var(--fs-14);cursor:pointer;font-family:inherit;color:var(--text-s);margin-top:10px;}
+
+/* 日历样式 */
+.week-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;}
+.wc-day{text-align:center;padding:8px 4px;border-radius:10px;background:var(--bg);transition:all .15s;}
+.wc-day.today{background:var(--brand-light);border:1.5px solid var(--brand);}
+.wc-dow{font-size:var(--fs-14);color:var(--text-m);}
+.wc-date{font-size:var(--fs-16);font-weight:700;margin:2px 0;}
+.wc-val{font-size:var(--fs-14);color:var(--text-m);margin-top:2px;}
+.wc-val.has-val{color:var(--green);font-weight:600;}
+
+.month-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px;}
+.mc-dow{text-align:center;font-size:var(--fs-14);color:var(--text-m);padding:6px 0;font-weight:600;}
+.mc-day{text-align:center;padding:6px 2px 8px;border-radius:8px;background:var(--bg);min-height:56px;}
+.mc-day.empty{background:transparent;}
+.mc-day.today{background:var(--brand-light);border:1.5px solid var(--brand);}
+.mc-day.mild{background:#f1f8e9;}
+.mc-day.warm{background:#fff3e0;}
+.mc-day.hot{background:#ffebee;}
+.mc-d{font-size:var(--fs-14);font-weight:600;color:var(--text);}
+.mc-val{font-size:var(--fs-15);color:var(--green);font-weight:600;margin-top:2px;}
+
+/* 本年日历 */
+.year-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+.year-month{border-radius:10px;padding:8px 6px;text-align:center;background:#fafafa;min-height:60px;display:flex;flex-direction:column;justify-content:center;}
+.year-month.mild{background:#f1f8e9;}
+.year-month.warm{background:#fff3e0;}
+.year-month.hot{background:#ffebee;}
+.year-month .ym-label{font-size:var(--fs-15);color:var(--text-s);font-weight:600;}
+.year-month .ym-income{font-size:var(--fs-15);font-weight:700;color:var(--green);margin-top:2px;}
+.year-month .ym-profit{font-size:var(--fs-14);color:var(--text-m);margin-top:1px;}
+
+/* 今日明细标签 */
+.td-tag{background:#fff;padding:3px 10px;border-radius:10px;white-space:nowrap;font-size:var(--fs-14);}
+
+/* 厨师长编辑采购单 */
+.ce-row{display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;}
+.ce-row span{font-size:var(--fs-14);min-width:0;}
+.ce-inp{width:55px;padding:6px 6px;border:1px solid var(--border);border-radius:6px;font-size:var(--fs-14);font-family:inherit;text-align:center;}
+.ce-unit{font-size:var(--fs-14);color:var(--text-m);width:24px;text-align:center;}
+.ce-del{background:none;border:none;font-size:var(--fs-16);cursor:pointer;padding:0 4px;}
+.ce-add-btn{width:100%;padding:10px;background:var(--bg);color:var(--brand);border:1.5px dashed var(--brand);border-radius:10px;font-size:var(--fs-14);font-weight:600;cursor:pointer;font-family:inherit;margin-top:8px;}
+.ce-save-btn{flex:1;padding:10px;background:var(--brand);color:#fff;border:none;border-radius:10px;font-size:var(--fs-15);font-weight:600;cursor:pointer;font-family:inherit;}
+.ce-cancel-btn{flex:1;padding:10px;background:var(--bg);color:var(--text-s);border:1px solid var(--border);border-radius:10px;font-size:var(--fs-15);cursor:pointer;font-family:inherit;}
+
+/* 明细弹窗 */
+.detail-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;display:flex;align-items:flex-end;justify-content:center;}
+.detail-overlay.hide{display:none;}
+.detail-sheet{background:var(--white);border-radius:18px 18px 0 0;width:100%;max-width:420px;max-height:70vh;display:flex;flex-direction:column;animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.detail-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.detail-header .dh-title{font-size:var(--fs-16);font-weight:700;}
+.detail-close{width:30px;height:30px;border:none;border-radius:50%;background:var(--bg);font-size:var(--fs-18);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-m);}
+.detail-body{overflow-y:auto;padding:12px 16px 24px;flex:1;}
+.detail-tags{display:flex;flex-wrap:wrap;gap:4px 8px;margin-bottom:12px;padding:10px;background:var(--bg);border-radius:10px;font-size:var(--fs-14);}
+.detail-tags .dt-label{width:100%;font-weight:600;margin-bottom:2px;font-size:var(--fs-15);}
+.detail-tag-item{background:var(--white);padding:3px 10px;border-radius:10px;white-space:nowrap;}
+.detail-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:var(--fs-14);border-bottom:1px solid var(--border);}
+.detail-row .dr-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.detail-row .dr-amt{font-weight:600;white-space:nowrap;margin-left:10px;}
+.detail-empty{text-align:center;padding:32px 0;color:var(--text-m);font-size:var(--fs-14);}
+
+/* 卡片内的明细入口 */
+.sum-card{position:relative;}
+.sc-detail-link{position:absolute;right:8px;top:8px;font-size:var(--fs-14);color:var(--brand);cursor:pointer;font-weight:600;opacity:0.8;transition:opacity .15s;}
+.sc-detail-link:hover{opacity:1;}
+
+/* 趋势滚动 */
+.trend-scroll{display:flex;gap:6px;overflow-x:auto;padding:4px 0 8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;width:100%;}
+.trend-scroll::-webkit-scrollbar{display:none;}
+.trend-scroll .chart-bar-wrap{min-width:42px;flex-shrink:0;}
+</style>
+
+<script>
+/* ═══ 字体缩放 小/中/大 ═══ */
+(function(){
+  var KEY = 'sxs_font_size';
+  var cur = localStorage.getItem(KEY) || 'small';
+  document.documentElement.setAttribute('data-font-size', cur);
+  window.getFontSize = function(){ return localStorage.getItem(KEY)||'small'; };
+  window.setFontSize = function(lv){
+    if(['small','medium','large'].indexOf(lv)<0) return;
+    localStorage.setItem(KEY, lv);
+    document.documentElement.setAttribute('data-font-size', lv);
+    window.dispatchEvent(new Event('resize'));
+  };
+})();
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+  <span class="tb-title">📊 经营报表</span>
+</div>
+
+<div class="tab-bar">
+  <div class="tab-item active" onclick="switchTab('finance')">财务总览</div>
+  <div class="tab-item" onclick="switchTab('dishes')">营业趋势</div>
+  <div class="tab-item" onclick="switchTab('diagnose')">成本结构</div>
+  <div class="tab-item" onclick="switchTab('staff')">生意把脉</div>
+</div>
+
+<div id="tabContent"></div>
+
+
+<div class="bottom-nav" id="bottomNav"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════ Polyfill + 共享模块兜底（gongxiang.js 加载失败时启用） ═══════════
+if(!Array.prototype.find){Array.prototype.find=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return this[i];}return undefined;};}
+if(!String.prototype.padStart){String.prototype.padStart=function(len,str){str=str||' ';var s=String(this);while(s.length<len){s=str+s;}return s.slice(0,len);};}
+(function(){
+  if(!window.loadJSON)window.loadJSON=function(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):[];}catch(e){return[];}};
+  if(!window.saveJSON)window.saveJSON=function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}};
+  if(!window.todayStr)window.todayStr=function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  if(!window.pad)window.pad=function(n){return String(n).padStart(2,'0');};
+  if(!window.fmt0)window.fmt0=function(n){return Number(n||0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');};
+  if(!window.fmt2)window.fmt2=function(n){return Number(n||0).toFixed(2);};
+  if(!window.getUsers)window.getUsers=function(){return loadJSON('sxs_users')||[];};
+  if(!window.saveUsers)window.saveUsers=function(v){saveJSON('sxs_users',v);};
+  if(!window.getCurrentUserId)window.getCurrentUserId=function(){
+    var id=localStorage.getItem('sxs_current_user');
+    if(!id){
+      var users=getUsers();
+      if(!users.length){
+        var boss={id:'u_boss_001',name:'老板',role:'boss',active:true,createdAt:todayStr()};
+        saveUsers([boss]);
+        id=boss.id;
+      }else{
+        var b=null;
+        for(var i=0;i<users.length;i++){if(users[i].role==='boss'){b=users[i];break;}}
+        id=b?b.id:users[0].id;
+      }
+      localStorage.setItem('sxs_current_user',id);
+    }
+    return id;
+  };
+  if(!window.getCurrentUser)window.getCurrentUser=function(){var id=getCurrentUserId();var users=getUsers();for(var i=0;i<users.length;i++){if(users[i].id===id)return users[i];}return null;};
+  if(!window.getUserPerms)window.getUserPerms=function(){
+    var u=getCurrentUser();
+    if(!u)return{};
+    if(u.role==='boss')return{baobiao:true,caidan:true,caigou:'editor',kucun:true,shezhi:true,jizhang:true};
+    if(u.role==='chef')return{baobiao:true,chef_review:true,caigou:'editor',jizhang:true};
+    if(u.role==='manager')return{baobiao:true,caigou:'editor',kucun:true,jizhang:true};
+    if(u.role==='buyer')return{caigou:'editor',jizhang:true,kucun:true};
+    if(u.role==='keeper')return{kucun:true,jizhang:true,caigou:'editor'};
+    if(u.role==='waiter')return{caidan:true};
+    return u.perms||{};
+  };
+  if(!window.userUrl)window.userUrl=function(path){var sep=path.indexOf('?')>=0?'&':'?';return path+sep+'uid='+encodeURIComponent(getCurrentUserId());};
+  if(!window.renderBottomNav)window.renderBottomNav=function(activeKey){
+    var perms=getUserPerms();
+    var tabs=[];
+    if(perms.baobiao)tabs.push({key:'baobiao',icon:'📊',label:'报表',href:'catering.html'});
+    if(perms.caidan){var st=localStorage.getItem('sxs_shop_type')||'chaocai';if(st==='taocan'){tabs.push({key:'caidan',icon:'📋',label:'菜单管理',href:'taocan.html'});tabs.push({key:'dingdan',icon:'📊',label:'订单',href:'dingdan.html'});}else{tabs.push({key:'caidan',icon:'🍽️',label:'菜品管理',href:'caidan.html'});}}
+    if(perms.caigou)tabs.push({key:'caigou',icon:'🛒',label:'采购',href:'caigou.html'});
+    if(perms.kucun)tabs.push({key:'kucun',icon:'📦',label:'库存',href:'kucun.html'});
+    if(perms.jizhang)tabs.push({key:'jizhang',icon:'📒',label:'记账',href:'jizhang.html'});
+    tabs.push({key:'shezhi',icon:'👤',label:'我的',href:'shezhi.html'});
+    var seen={},filtered=[];
+    tabs.forEach(function(t){if(!seen[t.key]){seen[t.key]=true;filtered.push(t);}});
+    var h='';
+    filtered.forEach(function(t){
+      var act=t.key===activeKey?' active':'';
+      h+='<a class="nav-item'+act+'" href="'+userUrl(t.href)+'">'+t.icon+'<span class="n-label">'+t.label+'</span></a>';
+    });
+    var nav=document.getElementById('bottomNav');
+    if(nav)nav.innerHTML=h;
+  };
+  if(!window.getPurchaseFlow)window.getPurchaseFlow=function(){return loadJSON('sxs_flow_config')||{chefReview:false,bossReview:false};};
+  if(!window.savePurchaseFlow)window.savePurchaseFlow=function(flow){saveJSON('sxs_flow_config',flow);};
+  if(!window.getJizhang)window.getJizhang=function(){var d=loadJSON('sxs_jizhang');return Array.isArray(d)?d:[];};
+  if(!window.addLog)window.addLog=function(){};
+  if(!window.updateNotifBell)window.updateNotifBell=function(){};
+  if(!window.getNotificationCount)window.getNotificationCount=function(){return 0;};
+  if(!window.getCustomCatLabel)window.getCustomCatLabel=function(id){return id;};
+  if(!window.getCustomIncomeCatLabel)window.getCustomIncomeCatLabel=function(id){return id;};
+  if(!window.switchRole)window.switchRole=function(){location.reload();};
+  if(!window.createTimeElement)window.createTimeElement=function(){return document.createElement('span');};
+  if(!window.toast)window.toast=function(msg){var el=document.getElementById('toast');if(el){el.textContent=msg;el.style.opacity='1';setTimeout(function(){el.style.opacity='0';},2000);}};
+})();
+</script>
+<script src="gongxiang.js?v=20260715g" onerror="console.warn('gongxiang.js not loaded, using fallback')"></script>
+<script>
+var currentTab = 'finance';
+var timeRange = 'today'; // today|week|month|year|custom
+var customStart = '';   // 自定义起始日期
+var customEnd = '';     // 自定义结束日期
+var trendYearMode = 'this'; // this|all 趋势图年度模式
+
+function getDateRange(){
+  var now = new Date(); var today = todayStr();
+  if(timeRange==='today') return {start:today, end:today, label:'今日'};
+  if(timeRange==='week'){
+    var d = new Date();
+    var dayOfWeek = d.getDay() || 7; // 周日=7
+    d.setDate(d.getDate()-dayOfWeek+1); // 本周一
+    return {start: d.toISOString().slice(0,10), end:today, label:'本周'};
+  }
+  if(timeRange==='month'){
+    return {start: now.getFullYear()+'-'+pad(now.getMonth()+1)+'-01', end:today, label:'本月'};
+  }
+  if(timeRange==='year'){
+    return {start: now.getFullYear()+'-01-01', end:today, label:now.getFullYear()+'年'};
+  }
+  if(timeRange==='custom'){
+    return {start:customStart||today, end:customEnd||today, label:customStart+' ~ '+customEnd};
+  }
+  return {start:today, end:today, label:'今日'};
+}
+
+// ── 数据读取 ──
+function getJizhang(){ var d=loadJSON('sxs_jizhang'); return Array.isArray(d)?d:[]; }
+function getSales(){ var d=loadJSON('sxs_dish_sales'); return Array.isArray(d)?d:[]; }
+function getPurchases(){ return loadJSON('sxs_purchase_records'); }
+// 当前库存价值 = Σ(库存数量 × 单价)，与库存页共享 sxs_kucun / sp_prods
+function getInventoryValue(){
+  try{
+    var kucun = JSON.parse(localStorage.getItem('sxs_kucun')||'{}');
+    var prods = JSON.parse(localStorage.getItem('sp_prods')||'[]');
+    var total = 0;
+    prods.forEach(function(p){
+      var qty = (kucun[p.id]||0) + (kucun[p.name]||0);
+      var price = Number(p.lastPrice||p.price||0);
+      total += qty * price;
+    });
+    return total;
+  }catch(e){ return 0; }
+}
+
+// ═══════════ 渲染 ═══════════
+function init(){
+  try {
+    // 顶部图标已简化为仅消息通知
+    renderBottomNav('baobiao');
+    updateNotifBell();
+    renderTab();
+  } catch(e){
+    var tc = document.getElementById('tabContent');
+    if(tc) tc.innerHTML = '<div style="padding:16px;color:var(--red);font-size:var(--fs-15);">⚠️ 页面加载出错：'+e.message+'</div>';
+  }
+}
+// 延迟到当前同步脚本（含 BENCHMARKS 等常量赋值）执行完后再渲染，
+// 避免首帧 init 早于 BENCHMARKS 定义导致 renderFinance 崩溃（现象：刷新报错、切回正常）
+setTimeout(init, 0);
+
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll('.tab-item').forEach(function(el,i){
+    var tabs = ['finance','dishes','diagnose','staff'];
+    el.classList.toggle('active', tabs[i]===tab);
+  });
+  renderTab();
+}
+
+
+// ═══════════ 厨师长编辑采购单 ═══════════
+var _chefEditOrderId = '';
+
+function openChefEdit(orderId){
+  _chefEditOrderId = orderId;
+  var orders = loadJSON('sxs_purchase_orders');
+  var o = orders.find(function(x){return x.id===orderId;});
+  if(!o) return;
+  
+  var h = '<div style="padding:8px 0;font-size:var(--fs-15);color:var(--text-s);">'+
+    o.buyerName+' · '+o.date+' · ¥'+fmt0(o.total)+'</div>';
+  
+  (o.items||[]).forEach(function(it, idx){
+    h += '<div class="ce-row">'+
+      '<span>'+(it.emoji||'📦')+' <b>'+it.name+'</b></span>'+
+      '<input class="ce-inp" value="'+it.qty+'" data-idx="'+idx+'" data-field="qty" type="number" step="0.1" placeholder="数量">'+
+      '<input class="ce-inp" value="'+it.price+'" data-idx="'+idx+'" data-field="price" type="number" step="0.1" placeholder="单价">'+
+      '<span class="ce-unit">'+it.unit+'</span>'+
+      '<button class="ce-del" onclick="chefDelItem('+idx+')">🗑️</button>'+
+    '</div>';
+  });
+  
+  h += '<button class="ce-add-btn" onclick="chefAddItem()">＋ 添加商品</button>';
+  h += '<div style="display:flex;gap:8px;margin-top:12px;">'+
+    '<button class="ce-save-btn" onclick="chefSaveEdit()">💾 保存修改</button>'+
+    '<button class="ce-cancel-btn" onclick="closeChefEdit()">取消</button>'+
+  '</div>';
+  
+  showChefEditModal(h);
+}
+
+function chefDelItem(idx){
+  var orders = loadJSON('sxs_purchase_orders');
+  var o = orders.find(function(x){return x.id===_chefEditOrderId;});
+  if(!o) return;
+  o.items.splice(idx, 1);
+  saveJSON('sxs_purchase_orders', orders);
+  openChefEdit(_chefEditOrderId); // 刷新界面
+}
+
+function chefAddItem(){
+  var name = prompt('商品名称：');
+  if(!name) return;
+  var qty = parseFloat(prompt('数量：','1')) || 1;
+  var price = parseFloat(prompt('单价（元）：','0')) || 0;
+  var unit = prompt('单位：','斤') || '斤';
+  var orders = loadJSON('sxs_purchase_orders');
+  var o = orders.find(function(x){return x.id===_chefEditOrderId;});
+  if(!o) return;
+  o.items.push({ name:name, emoji:'📦', qty:qty, unit:unit, price:price });
+  saveJSON('sxs_purchase_orders', orders);
+  openChefEdit(_chefEditOrderId);
+}
+
+function chefSaveEdit(){
+  var orders = loadJSON('sxs_purchase_orders');
+  var o = orders.find(function(x){return x.id===_chefEditOrderId;});
+  if(!o) return;
+  
+  // 从输入框读取修改后的值
+  var inputs = document.querySelectorAll('.ce-inp');
+  inputs.forEach(function(inp){
+    var idx = parseInt(inp.dataset.idx);
+    var field = inp.dataset.field;
+    var val = parseFloat(inp.value);
+    if(o.items[idx] && !isNaN(val)){
+      o.items[idx][field] = val;
+    }
+  });
+  
+  // 重新计算总价
+  o.total = o.items.reduce(function(s,it){return s+it.qty*(it.price||0);},0);
+  var _cu=getCurrentUser();
+  if(_cu && _cu.role==='boss'){ o.bossEdits = { time:todayStr()+' '+nowTimeStr(), editor:getUserName() }; }
+  else { o.chefEdits = { time:todayStr()+' '+nowTimeStr(), editor:getUserName() }; }
+  
+  saveJSON('sxs_purchase_orders', orders);
+  addLog('chef_edit', '厨师长修改采购单 ¥'+fmt0(o.total), 'purchase');
+  closeChefEdit();
+  if(typeof renderNotifList==='function'){ renderNotifList(); }
+  toast('修改已保存', true);
+}
+
+function showChefEditModal(html){
+  var mask = document.getElementById('chefEditMask');
+  if(!mask){
+    mask = document.createElement('div');
+    mask.id = 'chefEditMask';
+    mask.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:100;display:flex;align-items:flex-end;justify-content:center;';
+    mask.onclick = function(e){if(e.target===this) closeChefEdit();};
+    document.body.appendChild(mask);
+  }
+  var sheet = document.createElement('div');
+  sheet.id = 'chefEditSheet';
+  sheet.style.cssText = 'background:#fff;width:100%;max-width:420px;border-radius:20px 20px 0 0;padding:20px 18px 30px;max-height:70vh;overflow-y:auto;animation:slideUp .25s;';
+  sheet.innerHTML = '<div style="font-size:var(--fs-15);font-weight:600;text-align:center;margin-bottom:14px;">✏️ 编辑采购单</div>' + html;
+  
+  // 添加动画样式
+  if(!document.getElementById('slideUpStyle')){
+    var sty = document.createElement('style');
+    sty.id = 'slideUpStyle';
+    sty.textContent = '@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}';
+    document.head.appendChild(sty);
+  }
+  
+  mask.innerHTML = '';
+  mask.appendChild(sheet);
+  mask.style.display = 'flex';
+}
+
+function closeChefEdit(){
+  var mask = document.getElementById('chefEditMask');
+  if(mask) mask.style.display = 'none';
+  _chefEditOrderId = '';
+}
+
+function renderTab(){
+  var container = document.getElementById('tabContent');
+  try {
+    if(currentTab==='finance') container.innerHTML = renderFinance();
+    else if(currentTab==='dishes') container.innerHTML = renderDishes();
+    else if(currentTab==='diagnose') container.innerHTML = renderDiagnose();
+    else if(currentTab==='staff') container.innerHTML = renderStaff();
+  } catch(e){
+    container.innerHTML = '<div style="padding:16px;color:var(--red);">⚠️ Tab渲染出错：'+e.message+'</div>';
+  }
+}
+
+// ═══════════ 财务总览 ═══════════
+function renderFinance(){
+  try {
+  var range = getDateRange();
+  var jz = getJizhang();
+  var income = 0, expense = 0;
+  jz.forEach(function(r){
+    if(r.date < range.start || r.date > range.end) return;
+    if(r.type==='income') income += Number(r.amount||0);
+    else expense += Number(r.amount||0);
+  });
+  var profit = income - expense;
+  var marginRate = income>0 ? (profit/income*100) : 0;
+  var costRate = income>0 ? (expense/income*100) : 0;
+
+  // 当前库存价值（数量 × 单价）
+  var inventoryValue = getInventoryValue();
+
+  var h = '';
+  // ── 时间筛选 ──
+  h += '<div class="time-filter">';
+  ['today','week','month','year','custom'].forEach(function(t){
+    var labels = {today:'今日',week:'本周',month:'本月',year:'本年',custom:'自定义'};
+    h += '<div class="tf-btn'+(timeRange===t?' active':'')+'" onclick="changeTime(\''+t+'\')">'+labels[t]+'</div>';
+  });
+  h += '</div>';
+
+  // ── 自定义日期选择器 ──
+  if(timeRange==='custom'){
+    h += '<div style="display:flex;gap:6px;padding:6px 16px 0;align-items:center;font-size:var(--fs-14);">'+
+      '<input type="date" id="customStart" value="'+(customStart||todayStr())+'" onchange="onCustomDateChange()" style="flex:1;padding:7px 8px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:var(--fs-14);">'+
+      '<span style="color:var(--text-m);">~</span>'+
+      '<input type="date" id="customEnd" value="'+(customEnd||todayStr())+'" onchange="onCustomDateChange()" style="flex:1;padding:7px 8px;border:1px solid var(--border);border-radius:10px;font-family:inherit;font-size:var(--fs-14);">'+
+    '</div>';
+  }
+
+  // ── 汇总卡片（2列 × 3行：营收|支出 / 利润|利润率 / 成本率|当前库存价值）──
+  h += '<div class="summary-row">'+
+    '<div class="sum-card" style="cursor:pointer;" onclick="showDetailModal(\'income\')"><div class="sc-label">营收</div><div class="sc-val income">¥'+fmt0(income)+'</div><div class="sc-detail-link">明细 →</div></div>'+
+    '<div class="sum-card" style="cursor:pointer;" onclick="showDetailModal(\'expense\')"><div class="sc-label">支出</div><div class="sc-val expense">¥'+fmt0(expense)+'</div><div class="sc-detail-link">明细 →</div></div>'+
+    '<div class="sum-card"><div class="sc-label">利润</div><div class="sc-val" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">¥'+fmt0(profit)+'</div></div>'+
+    '<div class="sum-card"><div class="sc-label">利润率</div><div class="sc-val" style="color:'+(marginRate>=25?'var(--green)':marginRate>=10?'var(--orange)':'var(--red)')+'">'+fmt2(marginRate)+'%</div></div>'+
+    '<div class="sum-card"><div class="sc-label">成本率</div><div class="sc-val">'+fmt2(costRate)+'%</div></div>'+
+    '<div class="sum-card"><div class="sc-label">当前库存价值</div><div class="sc-val" style="color:var(--brand);">¥'+fmt0(inventoryValue)+'</div></div>'+
+  '</div>';
+
+  // ── 本周/本月/本年 日历 ──
+  if(timeRange==='week'){ h += renderWeekCalendar(jz, range); }
+  if(timeRange==='month'){ h += renderMonthCalendar(jz); }
+  if(timeRange==='year'){ h += renderYearCalendar(jz); }
+
+  // ── 诊断建议 + 菜品分析（移入财务总览下方）──
+  h += renderBenchmarkDiagnose();
+  h += renderDishAnalysis();
+
+  return h;
+  } catch(e){
+    return '<div style="padding:16px;color:var(--red);font-size:var(--fs-15);">⚠️ 报表加载出错：'+e.message+'<br><small style="color:var(--text-m);">请检查数据或刷新重试</small></div>';
+  }
+}
+
+// ═══════════ 明细弹窗（营收/支出分开） ═══════════
+function showDetailModal(type){
+  var range = getDateRange();
+  var jz = getJizhang();
+  var list = jz.filter(function(r){return r.date>=range.start && r.date<=range.end && r.type===type;});
+
+  // 按金额降序
+  list.sort(function(a,b){return Number(b.amount||0)-Number(a.amount||0);});
+
+  var isIncome = type==='income';
+  var title = (isIncome?'💰':'💸')+' '+range.label+' '+(isIncome?'营收':'支出')+'明细';
+  var tagColor = isIncome ? 'var(--green)' : 'var(--red)';
+  var tagLabel = isIncome ? '💰 来源构成' : '💸 分类构成';
+
+  // ── 分类/来源标签 ──
+  var byGroup = {};
+  list.forEach(function(r){
+    var key = isIncome ? (r.source||r.catName||'其他收入') : (r.catName||r.catId||'其他');
+    byGroup[key] = (byGroup[key]||0) + Number(r.amount||0);
+  });
+
+  var body = '';
+  var hasData = false;
+
+  if(Object.keys(byGroup).length){
+    hasData = true;
+    body += '<div class="detail-tags"><span class="dt-label" style="color:'+tagColor+';">'+tagLabel+'</span>';
+    var groups = Object.keys(byGroup).sort(function(a,b){return byGroup[b]-byGroup[a];});
+    groups.forEach(function(k){
+      var label = k;
+      if(isIncome){
+        var labels = {table:'🍽️ 菜品管理',dish_sales:'📋 菜品销售',other:'💵 其他收入'};
+        label = labels[k]||k;
+      }
+      body += '<span class="detail-tag-item">'+label+' ¥'+fmt0(byGroup[k])+'</span>';
+    });
+    body += '</div>';
+  }
+
+  if(list.length){
+    hasData = true;
+    body += '<div style="font-size:var(--fs-14);font-weight:600;color:var(--text-s);margin-bottom:8px;">逐条明细（'+list.length+'笔）</div>';
+    list.forEach(function(r){
+      var label = r.note||r.catName||r.source||(isIncome?'收入':'支出');
+      var amtCls = 'color:'+tagColor+';';
+      var prefix = isIncome ? '+' : '-';
+      body += '<div class="detail-row">'+
+        '<span class="dr-label">'+(isIncome?'🟢':'🔴')+' '+label+' <span style="font-size:var(--fs-10);color:var(--text-m);">'+r.date+'</span></span>'+
+        '<span class="dr-amt" style="'+amtCls+'">'+prefix+'¥'+fmt0(r.amount)+'</span>'+
+      '</div>';
+    });
+  }
+
+  if(!hasData){
+    body = '<div class="detail-empty">'+range.label+(isIncome?'暂无营收':'暂无支出')+'记录</div>';
+  }
+
+  var h = '<div class="detail-overlay" id="detailOverlay" onclick="if(event.target===this)closeDetailModal()">'+
+    '<div class="detail-sheet">'+
+      '<div class="detail-header">'+
+        '<div class="dh-title">📋 '+title+'</div>'+
+        '<div class="detail-close" onclick="closeDetailModal()">✕</div>'+
+      '</div>'+
+      '<div class="detail-body">'+body+'</div>'+
+    '</div>'+
+  '</div>';
+
+  var old = document.getElementById('detailOverlay');
+  if(old) old.remove();
+  var tmp = document.createElement('div');
+  tmp.innerHTML = h;
+  document.body.appendChild(tmp.firstElementChild);
+}
+
+function closeDetailModal(){
+  var el = document.getElementById('detailOverlay');
+  if(el) el.remove();
+}
+
+// ═══════════ 本周日历 ═══════════
+function renderWeekCalendar(jz){
+  var now = new Date();
+  var dayOfWeek = now.getDay() || 7;
+  var monday = new Date(now); monday.setDate(now.getDate()-dayOfWeek+1);
+  
+  var h = '<div class="chart-section">'+
+    '<div class="chart-title">📅 本周营收日历</div>'+
+    '<div class="week-cal">';
+  
+  var weekNames = ['一','二','三','四','五','六','日'];
+  for(var i=0; i<7; i++){
+    var d = new Date(monday); d.setDate(monday.getDate()+i);
+    var ds = d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+    var isToday = ds===todayStr();
+    var dayIncome = 0;
+    jz.forEach(function(r){
+      if(r.date===ds && r.type==='income') dayIncome += Number(r.amount||0);
+    });
+    
+    h += '<div class="wc-day'+(isToday?' today':'')+'">'+
+      '<div class="wc-dow">'+weekNames[i]+'</div>'+
+      '<div class="wc-date">'+d.getDate()+'</div>'+
+      '<div class="wc-val'+(dayIncome>0?' has-val':'')+'">'+(dayIncome>0?'¥'+fmt0(dayIncome):'--')+'</div>'+
+    '</div>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+// ═══════════ 本月日历 ═══════════
+function renderMonthCalendar(jz){
+  var now = new Date();
+  var year = now.getFullYear(), month = now.getMonth();
+  var firstDay = new Date(year, month, 1);
+  var startDow = firstDay.getDay() || 7; // 1=周一
+  var daysInMonth = new Date(year, month+1, 0).getDate();
+  var today = todayStr();
+  
+  // 按日汇总
+  var dailyIncome = {};
+  jz.forEach(function(r){
+    if(r.type!=='income') return;
+    dailyIncome[r.date] = (dailyIncome[r.date]||0) + Number(r.amount||0);
+  });
+  
+  var h = '<div class="chart-section">'+
+    '<div class="chart-title">📅 '+year+'年'+(month+1)+'月 营收日历</div>'+
+    '<div class="month-cal">';
+  
+  // 星期头
+  var weekNames = ['一','二','三','四','五','六','日'];
+  weekNames.forEach(function(w){
+    h += '<div class="mc-dow">'+w+'</div>';
+  });
+  
+  // 空白格（月初补齐）
+  for(var i=1; i<startDow; i++){
+    h += '<div class="mc-day empty"></div>';
+  }
+  
+  // 每天
+  for(var d=1; d<=daysInMonth; d++){
+    var ds = year+'-'+pad(month+1)+'-'+pad(d);
+    var isToday = ds===today;
+    var amt = dailyIncome[ds]||0;
+    var intensity = '';
+    if(amt>5000) intensity = ' hot';
+    else if(amt>2000) intensity = ' warm';
+    else if(amt>500) intensity = ' mild';
+    
+    h += '<div class="mc-day'+(isToday?' today':'')+intensity+'">'+
+      '<div class="mc-d">'+d+'</div>'+
+      '<div class="mc-val">'+(amt>0?'¥'+fmt0(amt):'')+'</div>'+
+    '</div>';
+  }
+  
+  h += '</div></div>';
+  return h;
+}
+
+// ═══════════ 本年汇总 ═══════════
+function renderYearCalendar(jz){
+  var now = new Date();
+  var year = now.getFullYear();
+  var months = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+
+  // 按月汇总营收和支出
+  var monthlyData = {};
+  jz.forEach(function(r){
+    var m = r.date ? r.date.slice(0,7) : null;
+    if(!m || !m.startsWith(String(year))) return;
+    if(!monthlyData[m]) monthlyData[m] = {income:0,expense:0};
+    if(r.type==='income') monthlyData[m].income += Number(r.amount||0);
+    else monthlyData[m].expense += Number(r.amount||0);
+  });
+
+  var maxIncome = 0;
+  Object.keys(monthlyData).forEach(function(k){
+    maxIncome = Math.max(maxIncome, monthlyData[k].income);
+  });
+
+  var h = '<div class="chart-section">'+
+    '<div class="chart-title">📅 '+year+'年 月度营收汇总</div>'+
+    '<div class="year-grid">';
+
+  for(var i=0; i<12; i++){
+    var mKey = year+'-'+pad(i+1);
+    var d = monthlyData[mKey] || {income:0,expense:0};
+    var profit = d.income - d.expense;
+    var intensity = '';
+    if(maxIncome>0){
+      var ratio = d.income / maxIncome;
+      if(ratio>0.7) intensity=' hot';
+      else if(ratio>0.3) intensity=' warm';
+      else if(d.income>0) intensity=' mild';
+    }
+
+    h += '<div class="year-month'+intensity+'">'+
+      '<div class="ym-label">'+months[i]+'</div>'+
+      '<div class="ym-income">'+(d.income>0?'¥'+fmt0(d.income):'--')+'</div>'+
+      '<div class="ym-profit" style="color:'+(profit>=0?'var(--green)':'var(--red)')+'">'+(d.income||d.expense?'利润 ¥'+profit:'')+'</div>'+
+    '</div>';
+  }
+
+  h += '</div></div>';
+  return h;
+}
+
+function changeTime(t){
+  timeRange = t;
+  renderTab();
+}
+
+function onCustomDateChange(){
+  customStart = document.getElementById('customStart').value;
+  customEnd = document.getElementById('customEnd').value;
+  renderTab();
+}
+
+function getMonthlyTrend(){
+  // 当前年份 1→12 月
+  var now = new Date();
+  var y = now.getFullYear();
+  var result = [];
+  for(var m=1; m<=12; m++){
+    var start = y+'-'+pad(m)+'-01';
+    var lastDay = new Date(y,m,0).getDate();
+    var end = y+'-'+pad(m)+'-'+lastDay;
+    var income=0, expense=0;
+    getJizhang().forEach(function(r){
+      if(r.date>=start && r.date<=end){
+        if(r.type==='income') income+=Number(r.amount||0);
+        else expense+=Number(r.amount||0);
+      }
+    });
+    result.push({label:pad(m)+'月', income:income, expense:expense});
+  }
+  return result;
+}
+
+function switchTrendYear(mode){
+  trendYearMode = mode;
+  renderTab();
+}
+
+// ═══════════ 往年：各年份营收/支出双柱 ═══════════
+function renderAllYearCompare(){
+  var allJz = getJizhang();
+
+  var years = {};
+  allJz.forEach(function(r){
+    var yy = parseInt(r.date.split('-')[0]);
+    if(yy && yy>=2000) years[yy] = true;
+  });
+  var yearList = Object.keys(years).sort();
+
+  if(!yearList.length) return '<div class="no-data">暂无往年数据</div>';
+
+  var data = [];
+  var maxVal = 1;
+  yearList.forEach(function(yr){
+    var income = 0, expense = 0;
+    allJz.forEach(function(r){
+      var parts = r.date.split('-');
+      if(parseInt(parts[0])===parseInt(yr)){
+        if(r.type==='income') income += Number(r.amount||0);
+        else expense += Number(r.amount||0);
+      }
+    });
+    data.push({label: yr+'年', income:income, expense:expense});
+    maxVal = Math.max(maxVal, income, expense);
+  });
+
+  var h = '<div class="trend-scroll">';
+  data.forEach(function(d){
+    var ih = maxVal>0 ? Math.max(4, (d.income/maxVal*80)) : 4;
+    var eh = maxVal>0 ? Math.max(4, (d.expense/maxVal*80)) : 4;
+    h += '<div class="chart-bar-wrap">'+
+      '<div class="chart-bar inc" style="height:'+ih+'px;"></div>'+
+      '<div class="chart-bar exp" style="height:'+eh+'px;margin-top:2px;"></div>'+
+    '</div>';
+  });
+  h += '</div>';
+  // ── 固定年份标签行 ──
+  h += '<div class="chart-label-row">';
+  data.forEach(function(d){
+    h += '<span class="chart-label">'+d.label+'</span>';
+  });
+  h += '</div>'+
+    '<div style="display:flex;gap:14px;font-size:var(--fs-10);color:var(--text-m);margin-top:4px;justify-content:center;">'+
+      '<span>🟢 营收</span><span>🔴 支出</span>'+
+    '</div>';
+
+  return h;
+}
+
+// ═══════════ 菜品分析（标签现展示「营业趋势」；原菜品分析内容见下方 renderDishAnalysis） ═══════════
+function renderDishes(){
+  return renderTrendChart();
+}
+
+// ═══════════ 营业趋势（原财务总览内图表，移至「菜品分析」标签） ═══════════
+function renderTrendChart(){
+  try{
+  var trendData = getMonthlyTrend();
+  var h = '<div class="chart-section">'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'+
+      '<div class="chart-title" style="margin-bottom:0;">📈 营收趋势</div>'+
+      '<div style="display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px;font-size:var(--fs-15);">'+
+        '<div class="ty-btn'+(trendYearMode==='this'?' active':'')+'" onclick="switchTrendYear(\'this\')">本年</div>'+
+        '<div class="ty-btn'+(trendYearMode==='all'?' active':'')+'" onclick="switchTrendYear(\'all\')">往年</div>'+
+      '</div>'+
+    '</div>';
+
+  if(trendYearMode==='this'){
+    h += '<div class="trend-scroll">';
+    var maxVal2 = 1;
+    trendData.forEach(function(d){ maxVal2 = Math.max(maxVal2, d.income, d.expense); });
+    trendData.forEach(function(d){
+      var ih = maxVal2>0 ? Math.max(4, (d.income/maxVal2*80)) : 4;
+      var eh = maxVal2>0 ? Math.max(4, (d.expense/maxVal2*80)) : 4;
+      h += '<div class="chart-bar-wrap">'+
+        '<div class="chart-bar inc" style="height:'+ih+'px;"></div>'+
+        '<div class="chart-bar exp" style="height:'+eh+'px;margin-top:2px;"></div>'+
+      '</div>';
+    });
+    h += '</div>';
+    h += '<div class="chart-label-row">';
+    trendData.forEach(function(d){ h += '<span class="chart-label">'+d.label+'</span>'; });
+    h += '</div>'+
+      '<div style="display:flex;gap:14px;font-size:var(--fs-10);color:var(--text-m);margin-top:4px;justify-content:center;">'+
+        '<span>🟢 营收</span><span>🔴 支出</span>'+
+      '</div>';
+  } else {
+    h += renderAllYearCompare();
+  }
+  h += '</div>';
+  return h;
+  }catch(e){
+    return '<div style="padding:16px;color:var(--red);">⚠️ 趋势图加载出错：'+e.message+'</div>';
+  }
+}
+
+// ═══════════ 菜品分析（原「菜品分析」标签内容，移入财务总览下方） ═══════════
+function renderDishAnalysis(){
+  var sales = getSales();
+  var timeFilter = timeRange==='month' ? '本月' : getDateRange().label;
+  var range = getDateRange();
+
+  // 按菜品汇总
+  var dishMap = {};
+  sales.forEach(function(s){
+    if(s.date < range.start || s.date > range.end) return;
+    if(!dishMap[s.recipeId]){
+      dishMap[s.recipeId] = {name:s.name, qty:0, revenue:0, cost:0};
+    }
+    dishMap[s.recipeId].qty += s.qty||0;
+    dishMap[s.recipeId].revenue += (s.total||s.price*s.qty||0);
+    dishMap[s.recipeId].cost += (s.snapshotCost||0)*(s.qty||0);
+  });
+
+  var dishes = [];
+  Object.keys(dishMap).forEach(function(k){
+    var d = dishMap[k];
+    d.profit = d.revenue - d.cost;
+    d.margin = d.revenue>0 ? (d.profit/d.revenue*100) : 0;
+    dishes.push(d);
+  });
+  dishes.sort(function(a,b){return b.profit-a.profit;});
+
+  var medals = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+  var h = '';
+  if(!dishes.length){
+    h += '<div class="no-data">'+timeFilter+'暂无菜品销售数据</div>';
+    return h;
+  }
+
+  // TOP5 盈利
+  h += '<div class="sx-rec-box"><div class="sx-rec-head">🏆 '+timeFilter+'盈利 TOP5</div>';
+  dishes.slice(0,5).forEach(function(d,i){
+    h += '<div class="sx-rec-item">'+
+      '<span class="sx-rec-emoji">'+medals[i]+'</span>'+
+      '<span class="sx-rec-name">'+d.name+'<div class="sx-rec-sub">×'+d.qty+' 份</div></span>'+
+      '<span class="sx-rec-val good">+¥'+fmt0(d.profit)+'</span>'+
+    '</div>';
+  });
+  h += '</div>';
+
+  // TOP5 亏损
+  var bot5 = dishes.filter(function(d){return d.profit<0;}).slice(-5).reverse();
+  if(bot5.length){
+    h += '<div class="sx-rec-box"><div class="sx-rec-head">⚠️ '+timeFilter+'亏损菜品</div>';
+    bot5.forEach(function(d,i){
+      h += '<div class="sx-rec-item">'+
+        '<span class="sx-rec-emoji">'+medals[i]+'</span>'+
+        '<span class="sx-rec-name">'+d.name+'<div class="sx-rec-sub">成本率'+fmt2(d.margin)+'%</div></span>'+
+        '<span class="sx-rec-val bad">¥'+fmt0(d.profit)+'</span>'+
+      '</div>';
+    });
+    h += '</div>';
+  }
+
+  return h;
+}
+
+
+// ═══════════ 诊断建议（标签现展示「成本结构」；原诊断内容见下方 renderBenchmarkDiagnose） ═══════════
+function renderDiagnose(){
+  return renderCostStructure();
+}
+
+// ═══════════ 成本结构（原财务总览内图表，移至「诊断建议」标签） ═══════════
+function renderCostStructure(){
+  try{
+  var jz = getJizhang();
+  var range = getDateRange();
+  var costByCat = {};
+  jz.forEach(function(r){
+    if(r.date < range.start || r.date > range.end) return;
+    if(r.type==='expense'){
+      var cat = r.catName || r.catId || '其他';
+      costByCat[cat] = (costByCat[cat]||0) + Number(r.amount||0);
+    }
+  });
+  var costList = [];
+  Object.keys(costByCat).forEach(function(k){ costList.push({name:k, amount:costByCat[k]}); });
+  costList.sort(function(a,b){return b.amount-a.amount;});
+  var h = '<div class="chart-section">'+
+    '<div class="chart-title">📊 成本结构</div>'+
+    '<div class="cost-list">';
+  var maxCost = costList.length ? costList[0].amount : 1;
+  var colors = ['#e74c3c','#f39c12','#3498db','#9b59b6','#1abc9c','#e67e22','#2ecc71','#34495e'];
+  costList.forEach(function(c,i){
+    var w = maxCost>0 ? (c.amount/maxCost*100) : 0;
+    h += '<div class="cost-item">'+
+      '<span class="ci-name">'+c.name+'</span>'+
+      '<div class="ci-bar-wrap"><div class="ci-bar" style="width:'+w+'%;background:'+(colors[i%colors.length])+'"></div></div>'+
+      '<span class="ci-val">¥'+fmt0(c.amount)+'</span>'+
+    '</div>';
+  });
+  if(!costList.length) h += '<div class="no-data">暂无支出数据</div>';
+  h += '</div></div>';
+  return h;
+  }catch(e){
+    return '<div style="padding:16px;color:var(--red);">⚠️ 成本结构加载出错：'+e.message+'</div>';
+  }
+}
+
+// ═══════════ 诊断建议（原「诊断建议」标签内容，移入财务总览下方） ═══════════
+var BENCHMARKS = {
+  food:    { name:'食材成本', icon:'🥩', low:35, high:42, good:'≤35%正常', warn:'35-42%偏高', bad:'>42%严重', fix:'优化采购渠道，调整菜单结构，检查损耗' },
+  rent:    { name:'租金占比', icon:'🏠', low:12, high:18, good:'≤12%合理', warn:'12-18%注意', bad:'>18%偏高', fix:'房东谈判降租，或提高坪效' },
+  salary:  { name:'人工成本', icon:'👥', low:20, high:25, good:'≤20%合理', warn:'20-25%偏高', bad:'>25%严重', fix:'优化排班，考虑兼职替代全职' },
+  utility: { name:'水电能耗', icon:'⚡', low:5,  high:8,  good:'≤5%合理', warn:'5-8%偏高', bad:'>8%严重', fix:'检查设备能耗，更换节能设备' },
+  margin:  { name:'毛利率',   icon:'📈', low:60, high:50, good:'≥60%优秀', warn:'50-60%一般', bad:'<50%偏低', fix:'提价或降成本', invert:true },
+  misc:    { name:'杂项支出', icon:'🔧', low:3,  high:5,  good:'≤3%合理', warn:'3-5%注意', bad:'>5%偏高', fix:'控制非必要支出' },
+  fixed:   { name:'固定成本', icon:'🎯', low:35, high:45, good:'≤35%健康', warn:'35-45%注意', bad:'>45%危险', fix:'固定成本过高，需降房租或人工' }
+};
+
+function renderBenchmarkDiagnose(){
+  var jz = getJizhang();
+  var range = getDateRange();
+
+  var totalIncome = 0, totalExpense = 0;
+  var catAmount = {};
+  jz.forEach(function(r){
+    if(r.date < range.start || r.date > range.end) return;
+    if(r.type==='income') totalIncome += Number(r.amount||0);
+    else {
+      totalExpense += Number(r.amount||0);
+      var cat = r.catId || 'other';
+      catAmount[cat] = (catAmount[cat]||0) + Number(r.amount||0);
+    }
+  });
+
+  if(totalIncome===0){
+    return '<div class="no-data" style="padding:40px 0;">'+range.label+'暂无营收数据，诊断需要营收数据支撑</div>';
+  }
+
+  var h = '';
+  // 诊断列表
+  h += '<div class="sx-rec-box"><div class="sx-rec-head">🔍 '+range.label+'经营诊断</div>';
+
+  var diagResults = [];
+  Object.keys(BENCHMARKS).forEach(function(key){
+    var b = BENCHMARKS[key]; if(b.suppress) return;
+    var ratio = 0;
+    if(key==='margin'){
+      ratio = totalIncome>0 ? ((totalIncome-totalExpense)/totalIncome*100) : 0;
+    } else if(key==='fixed'){
+      ratio = totalIncome>0 ? (((catAmount.rent||0)+(catAmount.salary||0))/totalIncome*100) : 0;
+    } else {
+      ratio = totalIncome>0 ? ((catAmount[key]||0)/totalIncome*100) : 0;
+    }
+    var status;
+    if(b.invert){
+      status = ratio>=b.low ? 'good' : (ratio>=b.high ? 'warn' : 'bad');
+    } else {
+      status = ratio<=b.low ? 'good' : (ratio<=b.high ? 'warn' : 'bad');
+    }
+    var statusText = status==='good'?b.good:(status==='warn'?b.warn:b.bad);
+    diagResults.push({key:key, name:b.name, icon:b.icon, ratio:ratio, status:status, statusText:statusText, fix:b.fix, amount:catAmount[key]||0});
+  });
+
+  diagResults.forEach(function(d){
+    var stIcon = d.status==='good'?'✅':(d.status==='warn'?'⚠️':'❌');
+    h += '<div class="sx-rec-item">'+
+      '<span class="sx-rec-emoji">'+d.icon+'</span>'+
+      '<span class="sx-rec-name">'+d.name+'：'+fmt2(d.ratio)+'%<div class="sx-rec-sub">'+d.statusText+'</div></span>'+
+      '<span class="sx-rec-val '+d.status+'">'+stIcon+'</span>'+
+    '</div>';
+  });
+  h += '</div>';
+
+  // AI建议
+  var badItems = diagResults.filter(function(d){return d.status==='bad'||d.status==='warn';});
+  h += '<div class="sx-rec-box"><div class="sx-rec-head">🤖 AI优化建议</div>';
+  if(badItems.length>0){
+    badItems.forEach(function(d){
+      h += '<div class="sx-rec-item">'+
+        '<span class="sx-rec-emoji">💡</span>'+
+        '<span class="sx-rec-name"><strong>'+d.name+' '+fmt2(d.ratio)+'%</strong><div class="sx-rec-sub">'+d.fix+'</div></span>'+
+      '</div>';
+    });
+  } else {
+    h += '<div class="sx-rec-item"><span class="sx-rec-emoji">👍</span><span class="sx-rec-name">'+range.label+'各项指标均在健康范围，经营状况良好！继续保持</span></div>';
+  }
+  h += '</div>';
+
+  return h;
+}
+
+
+// ═══════════ 生意把脉（原员工绩效，占位待开发） ═══════════
+function renderStaff(){
+  return '<div class="no-data" style="padding:48px 0;">'+
+    '<div style="font-size:var(--fs-22);margin-bottom:10px;">🤖 生意把脉</div>'+
+    '<div style="font-size:var(--fs-14);color:var(--text-m);line-height:1.7;">AI 将基于门店长期经营数据，<br>给出成本、毛利、引流等诊断与提升建议。<br><span style="color:var(--brand);">功能开发中，敬请期待～</span></div>'+
+  '</div>';
+}
+
+function changeTimePerf(t){
+  timeRange = t;
+  renderTab();
+}
+
+// 消息通知已停用（2026-07-11）：相关函数移除，改由业务入口红点提醒
+</script>
+</body>
+</html>
