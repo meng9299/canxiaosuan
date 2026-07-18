@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>餐小算 · 订单</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+    --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+    --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px;
+    --brand: #534AB7; --brand-light: #EEEDFE; --brand-mid: #7F77DD;
+    --bg: #f3f2ef; --white: #fff; --text: #1a1a1a; --text-s: #555; --text-m: #777;
+    --border: rgba(0,0,0,0.1); --radius: 16px; --red: #e74c3c; --green: #27ae60; --orange: #f39c12;
+  }
+  body {font-weight:600;font-family: -apple-system, 'PingFang SC', 'Helvetica Neue', sans-serif; background: var(--bg); color: var(--text); max-width: 420px; margin: 0 auto; padding-bottom: 90px; min-height:100vh; }
+  .topbar { display: flex; align-items: center; padding: 16px 18px 10px; background: var(--white); position: sticky; top: 0; z-index: 10; border-bottom: 1px solid var(--border); justify-content: space-between; }
+  .topbar .mid { display: flex; align-items: center; flex: 1; }
+  .topbar .back { font-size: var(--fs-20); color: var(--text); text-decoration: none; margin-right: 12px; }
+  .topbar .title { font-size: var(--fs-16); font-weight: 600; }
+  .role-tag { display: flex; align-items: center; gap: 4px; font-size: var(--fs-12); font-weight: 500; cursor: pointer; padding: 4px 10px; border-radius: 16px; background: var(--bg); color: var(--text-s); border: 1px solid var(--border); text-decoration: none; white-space: nowrap; }
+  .role-tag.boss { background: #fff3e0; color: #e65100; border-color: #ffe0b2; }
+
+  /* 汇总 */
+  .order-summary { display: flex; gap: 8px; padding: 14px 18px; }
+  .os-stat { flex: 1; background: var(--white); border-radius: var(--radius); padding: 12px; text-align: center; }
+  .os-num { font-size: var(--fs-22); font-weight: 700; color: var(--brand); }
+  .os-label { font-size: var(--fs-11); color: var(--text-m); margin-top: 2px; }
+
+  /* 筛选 */
+  .filter-row { display: flex; gap: 6px; padding: 0 18px 10px; }
+  .f-chip { flex-shrink:0; padding:6px 16px; border-radius:14px; font-size: var(--fs-14); cursor:pointer; background:var(--bg); color:var(--text-s); border:1px solid var(--border); }
+  .f-chip.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+
+  /* 订单列表 */
+  .order-list { padding: 0 18px; }
+  .order-card { background: var(--white); border-radius: var(--radius); padding: 14px; margin-bottom: 10px; cursor: pointer; border: 1px solid transparent; }
+  .order-card:active { border-color: var(--brand-mid); }
+  .oc-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .oc-table { font-size: var(--fs-16); font-weight: 700; }
+  .oc-amt { font-size: var(--fs-16); font-weight: 700; color: var(--brand); }
+  .oc-sub { display: flex; justify-content: space-between; font-size: var(--fs-13); color: var(--text-m); }
+  .oc-pay { font-size: var(--fs-11); padding: 1px 8px; border-radius: 8px; background: var(--brand-light); color: var(--brand); }
+  .empty { text-align: center; padding: 50px 20px; color: var(--text-m); font-size: var(--fs-14); }
+
+  /* 弹窗 */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal-sheet { background: var(--white); width: 100%; max-width: 420px; border-radius: 20px 20px 0 0; padding: 20px 18px 30px; animation: slideUp 0.25s; max-height: 80vh; overflow-y: auto; }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .ms-title { font-size: var(--fs-15); font-weight: 600; text-align: center; margin-bottom: 16px; }
+  .ms-cancel { display: block; width: 100%; padding: 12px; background: var(--bg); border: none; border-radius: 12px; margin-top: 12px; font-size: var(--fs-14); cursor: pointer; color: var(--text-s); font-family: inherit; }
+  .od-meta { font-size: var(--fs-13); color: var(--text-m); text-align: center; margin-bottom: 12px; }
+  .od-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: var(--fs-14); }
+  .od-item .odi-name { flex: 1; }
+  .od-item .odi-qty { color: var(--text-m); width: 60px; text-align: center; }
+  .od-item .odi-amt { width: 80px; text-align: right; font-weight: 600; }
+  .od-total { display: flex; justify-content: space-between; padding: 12px 0 4px; font-size: var(--fs-15); font-weight: 700; }
+  .od-pay { text-align: right; font-size: var(--fs-13); color: var(--text-m); }
+
+  .bottom-nav { position: fixed; bottom: 0; left: 50%; -webkit-transform:translateX(-50%); transform: translateX(-50%); width: 100%; max-width: 420px; background: var(--white); border-top: 1px solid var(--border); display: flex; padding-bottom: env(safe-area-inset-bottom, 4px); z-index: 50; }
+  .nav-item {font-weight:600; flex: 1; text-align: center; padding: 10px 0 8px; font-size:var(--fs-15); color: var(--text-m); cursor: pointer; text-decoration: none; }
+  .nav-item.active { color: var(--brand); }
+  .nav-item .n-icon { font-size: var(--fs-20); display: block; margin-bottom: 2px; }
+  .nav-item .n-label { font-size: var(--fs-15); font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="mid"><a class="back" href="catering.html">←</a>
+  <span class="title">📝 订单</span>
+  </div>
+  <a class="role-tag boss" id="roleTag" href="javascript:void(0)" onclick="openRoleSwitcher()">👔 老板</a>
+</div>
+
+<!-- 汇总 -->
+<div class="order-summary">
+  <div class="os-stat"><div class="os-num" id="osCount">0</div><div class="os-label">今日订单</div></div>
+  <div class="os-stat"><div class="os-num" id="osAmt">¥0</div><div class="os-label">今日营业额</div></div>
+</div>
+
+<!-- 筛选 -->
+<div class="filter-row" id="dateFilter">
+  <span class="f-chip active" onclick="setRange('today')">今日</span>
+  <span class="f-chip" onclick="setRange('all')">全部</span>
+</div>
+
+<!-- 订单列表 -->
+<div class="order-list" id="orderList"></div>
+
+<!-- 订单详情弹窗 -->
+<div class="modal-overlay" id="orderModal" onclick="if(event.target===this)closeOrderModal()">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="ms-title" id="omTitle">订单详情</div>
+    <div id="omBody"></div>
+    <button class="ms-cancel" onclick="closeOrderModal()">关闭</button>
+  </div>
+</div>
+
+<div class="bottom-nav" id="bottomNav"></div>
+
+<script src="gongxiang.js?v=20260715g"></script>
+<script>
+// ========== 数据读取 ==========
+function getTableOrders(){
+  var jz = loadJSON('sxs_jizhang');
+  return (jz||[]).filter(function(r){ return r.source==='table'; });
+}
+var curRange = 'today';
+
+function setRange(range){
+  curRange = range;
+  var chips = document.querySelectorAll('#dateFilter .f-chip');
+  chips.forEach(function(c){ c.classList.toggle('active', c.getAttribute('onclick').indexOf("'"+range+"'")>=0); });
+  renderOrders();
+}
+
+function renderOrders(){
+  var orders = getTableOrders();
+  var today = todayStr();
+  if(curRange==='today') orders = orders.filter(function(o){ return o.date===today; });
+  orders.sort(function(a,b){ return String(b.id).localeCompare(String(a.id)); });
+
+  // 汇总（仅今日）
+  var todayOrders = getTableOrders().filter(function(o){ return o.date===today; });
+  var totalAmt = 0;
+  todayOrders.forEach(function(o){ totalAmt += Number(o.amount)||0; });
+  document.getElementById('osCount').textContent = todayOrders.length;
+  document.getElementById('osAmt').textContent = '¥' + fmt0(totalAmt);
+
+  var div = document.getElementById('orderList');
+  if(!orders.length){
+    div.innerHTML = '<div class="empty">📭 ' + (curRange==='today'?'今日还没有订单':'暂无订单记录') + '<br><span style="font-size:var(--fs-13);">去点菜页结账后这里会显示</span></div>';
+    return;
+  }
+  var payNames = { wechat:'微信', alipay:'支付宝', cash:'现金', card:'刷卡' };
+  var h = '';
+  orders.forEach(function(o){
+    var items = o.items||[];
+    var itemCount = items.reduce(function(s,it){ return s + (Number(it.qty)||0); }, 0);
+    h += '<div class="order-card" onclick="openOrderDetail(\''+o.id+'\')">'+
+      '<div class="oc-head"><span class="oc-table">'+(o.tableName||'散单')+'</span><span class="oc-amt">¥'+fmt2(o.amount)+'</span></div>'+
+      '<div class="oc-sub"><span>'+o.date+' '+o.time+' · '+itemCount+' 件</span>'+
+      '<span class="oc-pay">'+(payNames[o.payMethod]||o.payMethod||'')+'</span></div>'+
+    '</div>';
+  });
+  div.innerHTML = h;
+}
+
+function openOrderDetail(id){
+  var orders = getTableOrders();
+  var o = orders.find(function(x){ return x.id===id; });
+  if(!o) return;
+  var payNames = { wechat:'微信支付', alipay:'支付宝', cash:'现金', card:'刷卡' };
+  var items = o.items||[];
+  var subtotal = items.reduce(function(s,it){ return s + (Number(it.price)||0)*(Number(it.qty)||0); }, 0);
+  var discount = Number(o.discount)||0;
+  var total = Number(o.amount)||0;
+  var h = '<div class="od-meta">'+o.date+' '+o.time+' · '+(o.tableName||'散单')+'</div>';
+  items.forEach(function(it){
+    h += '<div class="od-item"><span class="odi-name">'+it.name+(it.note?('（'+it.note+'）'):'')+'</span>'+
+      '<span class="odi-qty">×'+it.qty+'</span>'+
+      '<span class="odi-amt">¥'+fmt2((Number(it.price)||0)*(Number(it.qty)||0))+'</span></div>';
+  });
+  if(discount>0) h += '<div class="od-item"><span class="odi-name">优惠</span><span class="odi-qty"></span><span class="odi-amt" style="color:var(--green);">-¥'+fmt2(discount)+'</span></div>';
+  h += '<div class="od-total"><span>合计</span><span>¥'+fmt2(total)+'</span></div>';
+  h += '<div class="od-pay">支付方式：'+(payNames[o.payMethod]||o.payMethod||'未记录')+'</div>';
+  document.getElementById('omTitle').textContent = (o.tableName||'散单') + ' 订单';
+  document.getElementById('omBody').innerHTML = h;
+  document.getElementById('orderModal').classList.add('show');
+}
+function closeOrderModal(){ document.getElementById('orderModal').classList.remove('show'); }
+
+// 角色切换（与全局一致）
+function openRoleSwitcher(){ if(typeof showRoleSwitcher==='function'){ showRoleSwitcher(); return; } location.href='shezhi.html'; }
+
+// ========== 初始化 ==========
+(function(){
+  renderBottomNav('dingdan');
+  var me = (typeof getCurrentUser==='function') ? getCurrentUser() : null;
+  var tag = document.getElementById('roleTag');
+  if(tag && me) tag.textContent = (me.name||me.role);
+  renderOrders();
+})();
+</script>
+
+<script>
+// Polyfill + fallback（gongxiang.js 未加载时保底）
+if(!Array.prototype.find){Array.prototype.find=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return this[i];}return undefined;};}
+if(!Array.prototype.reduce){Array.prototype.reduce=function(fn,init){var s=init;for(var i=0;i<this.length;i++){s=fn(s,this[i],i,this);}return s;};}
+if(!String.prototype.padStart){String.prototype.padStart=function(len,str){str=str||' ';var s=String(this);while(s.length<len){s=str+s;}return s.slice(0,len);};}
+(function(){
+  if(!window.loadJSON)window.loadJSON=function(k){try{var v=localStorage.getItem(k);return v?JSON.parse(v):[];}catch(e){return[];}};
+  if(!window.saveJSON)window.saveJSON=function(k,v){try{localStorage.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}};
+  if(!window.todayStr)window.todayStr=function(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  if(!window.fmt0)window.fmt0=function(n){return Number(n||0).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',');};
+  if(!window.fmt2)window.fmt2=function(n){return Number(n||0).toFixed(2);};
+  if(!window.getUsers)window.getUsers=function(){return loadJSON('sxs_users')||[];};
+  if(!window.saveUsers)window.saveUsers=function(v){saveJSON('sxs_users',v);};
+  if(!window.getCurrentUserId)window.getCurrentUserId=function(){
+    var id=localStorage.getItem('sxs_current_user');
+    if(!id){var users=getUsers();if(!users.length){var boss={id:'u_boss_001',name:'老板',role:'boss',active:true,createdAt:todayStr()};saveUsers([boss]);id=boss.id;}else{var b=null;for(var i=0;i<users.length;i++){if(users[i].role==='boss'){b=users[i];break;}}id=b?b.id:users[0].id;}localStorage.setItem('sxs_current_user',id);}return id;
+  };
+  if(!window.getCurrentUser)window.getCurrentUser=function(){var id=getCurrentUserId();var users=getUsers();for(var i=0;i<users.length;i++){if(users[i].id===id)return users[i];}return null;};
+  if(!window.getUserPerms)window.getUserPerms=function(){var u=getCurrentUser();if(!u)return{};if(u.role==='boss')return{baobiao:true,caidan:true,caigou:'editor',kucun:true,shezhi:true,jizhang:true};if(u.role==='chef')return{baobiao:true,chef_review:true,caigou:'editor',jizhang:true};if(u.role==='manager')return{baobiao:true,caigou:'editor',kucun:true,jizhang:true};if(u.role==='buyer')return{caigou:'editor',jizhang:true,kucun:true};if(u.role==='keeper')return{kucun:true,jizhang:true,caigou:'editor'};if(u.role==='waiter')return{caidan:true};return u.perms||{};};
+  if(!window.userUrl)window.userUrl=function(path){var sep=path.indexOf('?')>=0?'&':'?';return path+sep+'uid='+encodeURIComponent(getCurrentUserId());};
+  if(!window.renderBottomNav)window.renderBottomNav=function(activeKey){
+    var perms=getUserPerms();var tabs=[];
+    if(perms.baobiao)tabs.push({key:'baobiao',icon:'📊',label:'报表',href:'catering.html'});
+    if(perms.caidan){var st=localStorage.getItem('sxs_shop_type')||'chaocai';if(st==='taocan'){tabs.push({key:'caidan',icon:'📋',label:'菜单管理',href:'taocan.html'});}else{tabs.push({key:'caidan',icon:'🍽️',label:'菜品管理',href:'menu_new.html?manage=1'});}}
+    if(perms.caigou)tabs.push({key:'caigou',icon:'🛒',label:'采购',href:'caigou.html'});
+    if(perms.kucun)tabs.push({key:'kucun',icon:'📦',label:'库存',href:'kucun.html'});
+    if(perms.jizhang)tabs.push({key:'jizhang',icon:'📒',label:'记账',href:'jizhang.html'});
+    tabs.push({key:'dingdan',icon:'📝',label:'订单',href:'dingdan.html'});
+    tabs.push({key:'shezhi',icon:'👤',label:'我的',href:'shezhi.html'});
+    var seen={},filtered=[];tabs.forEach(function(t){if(!seen[t.key]){seen[t.key]=true;filtered.push(t);}});
+    var h='';filtered.forEach(function(t){var act=t.key===activeKey?' active':'';h+='<a class="nav-item'+act+'" href="'+userUrl(t.href)+'">'+t.icon+'<span class="n-label">'+t.label+'</span></a>';});
+    var nav=document.getElementById('bottomNav');if(nav)nav.innerHTML=h;
+  };
+  if(!window.toast)window.toast=function(msg){console.log('[toast]',msg);};
+})();
+</script>
+</body>
+</html>
