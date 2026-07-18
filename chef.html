@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>餐小算 · 厨师长工作台</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+  --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+  --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px; --fs-26:26px;
+  --fs-28:28px; --fs-30:30px; --fs-36:36px;
+  --brand:#534AB7; --brand-light:#EEEDFE; --brand-mid:#7F77DD;
+  --bg:#f5f5f3; --white:#fff; --text:#1a1a1a; --text-s:#555; --text-m:#777;
+  --border:rgba(0,0,0,0.08); --radius:12px; --red:#e74c3c; --green:#27ae60; --orange:#f39c12;
+}
+body {font-weight:600;font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); max-width:420px; margin:0 auto; padding-bottom:80px;}
+/* 顶栏 */
+.topbar { display:flex; align-items:center; padding:12px 12px 10px; background:var(--white); position:sticky; top:0; z-index:20; border-bottom:1px solid var(--border); gap:8px; }
+.tb-title { font-size:var(--fs-16); font-weight:700; flex:1; }
+.tb-stock-btn { border:1px solid var(--brand); color:var(--brand); background:var(--brand-light); padding:6px 12px; border-radius:14px; font-size:var(--fs-12); font-weight:600; cursor:pointer; font-family:inherit; white-space:nowrap; }
+/* 三标签 */
+.chef-tabs { display:flex; background:var(--white); border-bottom:1px solid var(--border); position:sticky; top:49px; z-index:19; }
+.chef-tab { flex:1; text-align:center; padding:12px 4px; font-size:var(--fs-14); color:var(--text-m); cursor:pointer; position:relative; font-family:inherit; }
+.chef-tab.active { color:var(--brand); font-weight:700; }
+.chef-tab.active::after { content:''; position:absolute; left:50%; transform:translateX(-50%); bottom:0; width:36px; height:3px; background:var(--brand); border-radius:2px; }
+.chef-tab .tab-badge { display:inline-block; min-width:18px; padding:0 5px; height:18px; line-height:18px; font-size:11px; color:#fff; background:var(--red); border-radius:9px; margin-left:4px; vertical-align:middle; }
+.chef-tab .tab-badge.hide { display:none; }
+/* 区块 */
+.chef-section { background:var(--white); margin:10px 12px; border-radius:var(--radius); padding:12px 14px; }
+.sec-title { font-size:var(--fs-15); font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+.chef-sec-btns { margin-left:auto; margin-right:2ch; display:inline-flex; gap:4px; flex-shrink:0; }
+/* 待审核订单标题右侧的「手动添加 / AI录入」按钮：独立于 .sxs-od-btn-row，需单独给内边距与字号，否则会渲染成无样式的默认按钮 */
+.chef-sec-btns .sxs-od-add-inline{ padding:5px 10px; border-radius:9px; font-size:14px; font-weight:600; white-space:nowrap; cursor:pointer; font-family:inherit; }
+.chef-sec-btns .sxs-od-add-inline.sxs-od-ai-btn{ padding:5px 10px; }
+/* 订单按一级分类分组标题 */
+.cat-group-title{ font-size:var(--fs-13); font-weight:700; color:var(--brand); margin:12px 0 6px; padding-left:6px; border-left:3px solid var(--brand); }
+.cat-group-title:first-child{ margin-top:2px; }
+.sxs-od-wrap{ margin-top:6px; border:1px solid #f0f0f0; border-radius:12px; padding:10px; }
+/* 审核记录 / 查询结果卡片 */
+.chef-card { border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom:10px; background:var(--white); }
+.chef-card-head { display:flex; justify-content:space-between; align-items:center; font-size:var(--fs-13); color:var(--text-m); }
+.chef-card-head .cc-total { color:var(--brand); font-weight:700; }
+.chef-card-sub { font-size:var(--fs-13); color:var(--text-m); margin-top:4px; }
+.chef-card-toggle { margin-top:8px; text-align:right; }
+.chef-card-toggle button { padding:5px 14px; border:1px solid var(--brand); background:var(--brand-light); color:var(--brand); border-radius:8px; font-size:var(--fs-13); font-weight:600; cursor:pointer; font-family:inherit; }
+.chef-detail { margin-top:8px; border-top:1px dashed #eee; padding-top:8px; }
+.chef-item-line { display:flex; justify-content:space-between; padding:6px 2px; font-size:var(--fs-13); border-bottom:1px dashed #f5f5f5; }
+.chef-item-line:last-child { border-bottom:none; }
+.chef-item-line .ci-name { font-weight:600; }
+.chef-item-line .ci-meta { color:var(--text-m); }
+/* 库存信息弹层 */
+.ck-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:150; display:none; align-items:flex-end; justify-content:center; }
+.ck-mask.show { display:flex; }
+.ck-sheet { width:100%; max-width:420px; max-height:84vh; background:var(--white); border-radius:18px 18px 0 0; display:flex; flex-direction:column; overflow:hidden; }
+.ck-sheet-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border); }
+.ck-sheet-head .ck-title { font-weight:700; font-size:var(--fs-15); }
+.ck-sheet-head .ck-close { font-size:22px; color:#999; cursor:pointer; line-height:1; }
+.ck-sheet-body { flex:1; overflow:auto; padding:10px 14px 16px; }
+/* 库存商品（复刻 kucun.html 的 .stock-item 展示，只读，无编辑入口） */
+.stock-item { display:flex; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border); }
+.stock-item:last-child { border-bottom:none; }
+.stock-icon { font-size:var(--fs-22); margin-right:10px; flex-shrink:0; }
+.stock-info { flex:1; }
+.stock-info .si-name { font-size:var(--fs-13); font-weight:500; }
+.stock-info .si-sub { font-size:var(--fs-11); color:var(--text-m); margin-top:2px; }
+.stock-status { text-align:right; }
+.stock-status .ss-remain { font-size:var(--fs-15); font-weight:700; }
+.stock-status .ss-predict { font-size:var(--fs-11); margin-top:2px; }
+.stock-status.warning .ss-remain { color:var(--orange); }
+.stock-status.danger .ss-remain { color:var(--red); }
+.stock-status.safe .ss-remain { color:var(--green); }
+.tag-loss { font-size:var(--fs-9); padding:1px 5px; border-radius:4px; background:#fde8e8; color:var(--red); }
+/* 库存分类导航 + 搜索（复刻 kucun 库存页） */
+.filter-row { display:flex; flex-direction:row; flex-wrap:nowrap; align-items:center; gap:6px; padding:8px 18px; overflow-x:auto; scrollbar-width:none; }
+.filter-row::-webkit-scrollbar { display:none; }
+.f-chip { flex-shrink:0; white-space:nowrap; padding:4px 12px; border-radius:14px; font-size:var(--fs-14); cursor:pointer; background:var(--bg); color:var(--text-s); border:1px solid var(--border); }
+.f-chip.active { background:var(--brand); color:#fff; border-color:var(--brand); }
+/* 查询区 */
+.query-box { background:var(--white); margin:10px 12px; border-radius:var(--radius); padding:14px; }
+.query-row { margin-bottom:12px; }
+.query-row label { display:block; font-size:var(--fs-13); color:var(--text-m); margin-bottom:5px; }
+.query-row input { width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:var(--fs-14); font-family:inherit; outline:none; background:var(--bg); box-sizing:border-box; }
+.query-date { display:flex; gap:10px; }
+.query-date .query-row { flex:1; }
+.query-btn { width:100%; padding:12px; background:var(--brand); color:#fff; border:none; border-radius:12px; font-weight:700; font-size:var(--fs-15); cursor:pointer; font-family:inherit; }
+/* 底部导航 */
+#bottomNav{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px; display:flex; background:var(--white); border-top:1px solid var(--border); z-index:30; }
+.nav-item{font-weight:600; flex:1; text-align:center; padding:8px 0 6px; font-size:var(--fs-15); color:var(--text-m); cursor:pointer; text-decoration:none; }
+.nav-item.active{ color:var(--brand); font-weight:600; }
+.nav-item .n-icon{ font-size:var(--fs-20); display:block; margin-bottom:2px; }
+.nav-item .n-label{ font-size:var(--fs-11); }
+.empty-tip{ text-align:center; color:var(--text-m); padding:30px 0; font-size:var(--fs-14); }
+</style>
+<style>
+/* 厨师长「手动添加」弹窗：满屏 + 默认顶部 + 无商品时不收缩（仅本页，不影响 AI 录入弹窗） */
+#sxsAddMask{ align-items:flex-start !important; }
+#sxsAddPanel{ width:100% !important; max-width:100% !important; border-radius:0 0 16px 16px !important; min-height:78vh !important; max-height:92vh !important; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="tb-title">厨师长工作台</span>
+  <button class="tb-stock-btn" onclick="openChefStock()">库存信息</button>
+</div>
+
+<div class="chef-tabs">
+  <div class="chef-tab active" id="tabOrders" onclick="switchChefTab('orders')">待审核订单<span id="ordersBadge" class="tab-badge hide">0</span></div>
+  <div class="chef-tab" id="tabHistory" onclick="switchChefTab('history')">审核记录</div>
+  <div class="chef-tab" id="tabQuery" onclick="switchChefTab('query')">查询</div>
+</div>
+
+<!-- 待审核订单 -->
+<div id="paneOrders">
+  <div class="chef-section">
+    <div class="sec-title">待审核订单<span class="chef-sec-btns"><button class="sxs-od-add-inline" onclick="chefSectionAdd()">＋ 手动添加</button><button class="sxs-od-add-inline sxs-od-ai-btn" onclick="chefSectionAiRec()">🤖 AI 录入</button></span></div>
+    <div id="chefOrders"></div>
+  </div>
+</div>
+
+<!-- 审核记录 -->
+<div id="paneHistory" style="display:none;">
+  <div class="chef-section">
+    <div class="sec-title">审核记录</div>
+    <div id="chefHistory"></div>
+  </div>
+</div>
+
+<!-- 查询 -->
+<div id="paneQuery" style="display:none;">
+  <div class="query-box">
+    <div class="query-row">
+      <label>按商品名称</label>
+      <input id="qKw" placeholder="输入商品名，如：猪里脊" oninput="renderChefQuery()">
+    </div>
+    <div class="query-date">
+      <div class="query-row">
+        <label>起始日期</label>
+        <input id="qFrom" type="date" onchange="renderChefQuery()">
+      </div>
+      <div class="query-row">
+        <label>结束日期</label>
+        <input id="qTo" type="date" onchange="renderChefQuery()">
+      </div>
+    </div>
+    <button class="query-btn" onclick="renderChefQuery()">查询</button>
+  </div>
+  <div class="chef-section">
+    <div id="chefQueryResult"></div>
+  </div>
+</div>
+
+<!-- 库存信息弹层 -->
+<div class="ck-mask" id="chefStockMask" onclick="if(event.target===this)closeChefStock()">
+  <div class="ck-sheet" onclick="event.stopPropagation()">
+    <div class="ck-sheet-head">
+      <span class="ck-title">库存信息</span>
+      <span class="ck-close" onclick="closeChefStock()">×</span>
+    </div>
+    <div class="ck-sheet-body">
+      <div style="padding:6px 0 2px;">
+        <input id="chefStockSearch" placeholder="🔍 搜索商品..." oninput="renderChefStock()" style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:10px;font-size:var(--fs-14);font-family:inherit;outline:none;background:var(--bg);">
+      </div>
+      <div class="filter-row" id="chefStockFilter"></div>
+      <div id="chefStockList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="bottomNav"></div>
+
+<script src="gongxiang.js"></script>
+<script>
+// ═══════════ 厨师长页逻辑 ═══════════
+// 本地补 getRealStock / getLastPrices，使订单卡片能显示真实库存与上次采购价（sxsOdItemHTML 会调用）
+function getRealStock(name){
+  try{
+    var kc = JSON.parse(localStorage.getItem('sxs_kucun')||'{}');
+    if(kc[name]!==undefined) return Number(kc[name])||0;
+    var prods = loadJSON('sp_prods');
+    var p = prods.find(function(x){ return x.name===name; });
+    return p ? Number(p.qty||0) : 0;
+  }catch(e){ return 0; }
+}
+function getLastPrices(){
+  try{ return JSON.parse(localStorage.getItem('sxs_last_prices')||'{}'); }catch(e){ return {}; }
+}
+
+// 商品名 → 一级分类名（反查 sp_prods 的 catId → sp_cats）
+function resolveCatName(name){
+  try{
+    var prods = loadJSON('sp_prods')||[];
+    var p = prods.find(function(x){ return x.name===name; });
+    if(p && p.catId) return sxsGetCatName(p.catId)||'其他';
+  }catch(e){}
+  return '其他';
+}
+
+// 真实库存读取已内联进 renderChefStock；状态标签复用下方 stLabelOf
+
+function stLabelOf(o){
+  return o.status==='chef_pending'?'待厨师长审核'
+    : o.status==='boss_pending'?'待老板审批'
+    : o.status==='pending_receive'?'待验收'
+    : (o.status==='received'?'已入库'
+    : (o.status==='rejected'?'已驳回'
+    : (o.status==='approved'?'待采购':'审核中')));
+}
+
+// ── 标签切换 ──
+function switchChefTab(tab){
+  document.getElementById('paneOrders').style.display = tab==='orders'?'block':'none';
+  document.getElementById('paneHistory').style.display = tab==='history'?'block':'none';
+  document.getElementById('paneQuery').style.display = tab==='query'?'block':'none';
+  document.getElementById('tabOrders').classList.toggle('active', tab==='orders');
+  document.getElementById('tabHistory').classList.toggle('active', tab==='history');
+  document.getElementById('tabQuery').classList.toggle('active', tab==='query');
+  if(tab==='history') renderChefHistory();
+  if(tab==='query') renderChefQuery();
+}
+
+// 待审核订单标题右侧的「手动添加/AI录入」：加到列表第一张待审核单（整段只显示一次）
+function chefFirstPending(){
+  try{
+    var ls = (typeof _sxsMyPendingOrders==='function') ? _sxsMyPendingOrders() : [];
+    if(ls && ls.length) return ls[0];
+  }catch(e){}
+  return null;
+}
+function chefSectionAdd(){
+  var o = chefFirstPending();
+  if(!o){ toast('暂无可添加的待审核订单'); return; }
+  sxsAddItemToOrder(o.id);
+}
+function chefSectionAiRec(){
+  var o = chefFirstPending();
+  if(!o){ toast('暂无可添加的待审核订单'); return; }
+  sxsOpenAiRec(o.id);
+}
+// ── 待审核订单：chef_pending，按一级分类分组 ──
+function renderChefOrders(){
+  // 与消息中心（铃铛）同一套可见性判定：当前角色能看到哪些待办，这里就显示哪些（两个入口，数据一致）
+  var orders = loadJSON('sxs_purchase_orders')||[];
+  var pend = (typeof _sxsMyPendingOrders==='function')
+    ? _sxsMyPendingOrders()
+    : orders.filter(function(o){ return o.status==='chef_pending'; });
+  var box = document.getElementById('chefOrders');
+  var badge = document.getElementById('ordersBadge');
+  if(badge){ if(pend.length){ badge.textContent=pend.length; badge.classList.remove('hide'); } else { badge.classList.add('hide'); } }
+  if(!pend.length){
+    box.innerHTML = '<div class="empty-tip">暂无待审核订单</div>';
+    return;
+  }
+  var h='';
+  pend.forEach(function(o){
+    h += '<div class="sxs-od-wrap">';
+    h += '<div class="sxs-od-head">📋 '+(o.keeperName||o.buyerName||'仓管')+' 发起 · '+(o.date||'')+' · '+(o.time||'')+'</div>';
+    var groups = {};
+    (o.items||[]).forEach(function(it){
+      var cat = resolveCatName(it.name);
+      if(!groups[cat]) groups[cat]=[];
+      groups[cat].push(it);
+    });
+    var gi = 0;
+    Object.keys(groups).forEach(function(cat){
+      h += '<div class="cat-group-title">'+cat+'</div>';
+      groups[cat].forEach(function(it){
+        h += sxsOdItemHTML(it, o.id, gi++, 'order');
+      });
+    });
+    h += '<button class="sxs-od-submit" onclick="chefAdvance(\''+o.id+'\')">批量确认并发送</button>';
+    h += '</div>';
+  });
+  box.innerHTML = h;
+}
+
+// 包装 sxsAdvanceOrder：在厨师长工作台进行的审核，统一记为厨师长审核记录
+// （无论当前登录人是老板还是厨师长——此页即厨师长工作台，在这里做的审核就该进厨师长的审核记录）
+function chefAdvance(oid){
+  try{
+    var orders = loadJSON('sxs_purchase_orders')||[];
+    var o = orders.find(function(x){ return x.id===oid; });
+    if(o && !o.chefEdits){
+      o.chefEdits = { time: todayStr()+' '+nowTimeStr(), editor: getUserName() };
+      saveJSON('sxs_purchase_orders', orders);
+    }
+  }catch(e){}
+  if(typeof sxsAdvanceOrder==='function') sxsAdvanceOrder(oid);
+  renderChefOrders();
+  renderChefHistory();
+}
+
+// ── 审核记录：带 chefEdits 的订单 ──
+function renderChefHistory(){
+  var orders = loadJSON('sxs_purchase_orders')||[];
+  var done = orders.filter(function(o){ return o.chefEdits; })
+                   .sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+  var box = document.getElementById('chefHistory');
+  if(!done.length){
+    box.innerHTML = '<div class="empty-tip">暂无审核记录</div>';
+    return;
+  }
+  box.innerHTML = done.map(function(o){ return chefCardHTML(o, 'h_'+o.id); }).join('');
+}
+
+// ── 查询：日期 + 名称 筛选全部订单 ──
+function renderChefQuery(){
+  var kw = (document.getElementById('qKw').value||'').trim().toLowerCase();
+  var from = document.getElementById('qFrom').value||'';
+  var to = document.getElementById('qTo').value||'';
+  var orders = loadJSON('sxs_purchase_orders')||[];
+  var list = orders.filter(function(o){
+    if(from && (o.date||'') < from) return false;
+    if(to && (o.date||'') > to) return false;
+    if(kw){
+      var hit = (o.items||[]).some(function(it){ return (it.name||'').toLowerCase().indexOf(kw)>=0; });
+      if(!hit) return false;
+    }
+    return true;
+  }).sort(function(a,b){ return (b.createdAt||0)-(a.createdAt||0); });
+  var box = document.getElementById('chefQueryResult');
+  if(!list.length){
+    box.innerHTML = '<div class="empty-tip">没有匹配的订单</div>';
+    return;
+  }
+  box.innerHTML = list.map(function(o){ return chefCardHTML(o, 'q_'+o.id); }).join('');
+}
+
+// 审核记录 / 查询 共用订单卡片（只读，可展开明细）
+function chefCardHTML(o, detailId){
+  var items = o.items||[];
+  var total = Number(o.total||0);
+  var detail = items.map(function(it){
+    return '<div class="chef-item-line"><span class="ci-name">'+_sxsEsc(it.name)+'</span>'
+      + '<span class="ci-meta">'+fmt0(it.qty||0)+(it.unit||'')+' · ¥'+fmt0(Number(it.price||0)*(Number(it.qty)||0))+'</span></div>';
+  }).join('');
+  return '<div class="chef-card">'
+    + '<div class="chef-card-head"><span>'+(o.date||'')+' '+(o.time||'')+'</span><span class="cc-total">¥'+fmt0(total)+'</span></div>'
+    + '<div class="chef-card-sub">'+stLabelOf(o)+' · '+items.length+' 项 · 发起人：'+(o.keeperName||o.buyerName||'—')+'</div>'
+    + '<div class="chef-card-toggle"><button onclick="toggleChefDetail(\''+detailId+'\')">查看明细 ▾</button></div>'
+    + '<div class="chef-detail" id="'+detailId+'" style="display:none;">'+detail+'</div>'
+    + '</div>';
+}
+function toggleChefDetail(id){
+  var el = document.getElementById(id);
+  if(el) el.style.display = el.style.display==='block' ? 'none' : 'block';
+}
+
+// ── 库存信息弹层（一行行，只读；复刻 kucun 库存页：分类导航 + 搜索）──
+var chefStockFilterCat = null;
+function renderChefStockFilter(){
+  var cats = (typeof sxsGetCatLib==='function') ? sxsGetCatLib() : [];
+  var div = document.getElementById('chefStockFilter');
+  if(!div) return;
+  var h = '<span class="f-chip'+(chefStockFilterCat?'':' active')+'" onclick="filterChefStock(null)">全部</span>';
+  cats.filter(function(x){ return x.level===1 && x.name!=='固定费用'; }).forEach(function(c){
+    h += '<span class="f-chip'+(chefStockFilterCat===c.id?' active':'')+'" onclick="filterChefStock(\''+c.id+'\')">'+c.name+'</span>';
+  });
+  div.innerHTML = h;
+}
+function filterChefStock(catId){
+  chefStockFilterCat = catId;
+  renderChefStockFilter();
+  renderChefStock();
+}
+function getChefStockKw(){
+  var el = document.getElementById('chefStockSearch');
+  return el ? (el.value||'').trim().toLowerCase() : '';
+}
+function openChefStock(){
+  renderChefStockFilter();
+  renderChefStock();
+  document.getElementById('chefStockMask').classList.add('show');
+}
+function closeChefStock(){
+  document.getElementById('chefStockMask').classList.remove('show');
+}
+function renderChefStock(){
+  var prods = loadJSON('sp_prods')||[];
+  var cats = (typeof sxsGetCatLib==='function') ? sxsGetCatLib() : [];
+  var kc = {}; try{ kc = JSON.parse(localStorage.getItem('sxs_kucun')||'{}'); }catch(e){}
+  var box = document.getElementById('chefStockList');
+  if(!box) return;
+  // 分类筛选（含二级/三级子类）
+  var catIds;
+  if(chefStockFilterCat){
+    catIds = [chefStockFilterCat];
+    cats.filter(function(x){ return x.parentId===chefStockFilterCat; }).forEach(function(c){
+      catIds.push(c.id);
+      cats.filter(function(y){ return y.parentId===c.id; }).forEach(function(l3){ catIds.push(l3.id); });
+    });
+  }
+  var filtered = catIds ? prods.filter(function(p){ return catIds.indexOf(p.catId)!==-1; }) : prods;
+  var kw = getChefStockKw();
+  if(kw){ filtered = filtered.filter(function(p){ return (p.name||'').toLowerCase().indexOf(kw)>=0; }); }
+  if(!filtered.length){
+    box.innerHTML = '<div class="empty-tip">'+(prods.length? '没有匹配的商品' : '暂无库存数据')+'</div>';
+    return;
+  }
+  var h = filtered.map(function(p){
+    var stock = (kc[p.id]!==undefined) ? Number(kc[p.id])||0 : Number(p.qty||0);
+    var consume = (typeof sxsTodayConsume==='function') ? sxsTodayConsume(p.id) : 0;
+    consume = consume || 0;
+    var alertQty = Number(p.alertQty||0);
+    var daysLeft = consume>0 ? Math.floor(stock/consume) : 999;
+    var statusCls, predict;
+    if(stock <= alertQty){ statusCls='danger'; predict='<1天'; }
+    else if(daysLeft<=2){ statusCls='warning'; predict=daysLeft+'天'; }
+    else { statusCls='safe'; predict=daysLeft+'天'; }
+    var lossTag = (p.lossRate>0) ? ' <span class="tag-loss">损耗'+p.lossRate+'%</span>' : '';
+    return '<div class="stock-item">'
+      + '<span class="stock-icon">'+(p.emoji||'📦')+'</span>'
+      + '<div class="stock-info"><div class="si-name">'+_sxsEsc(p.name)+lossTag+'</div>'
+      + '<div class="si-sub">¥'+(Number(p.lastPrice||0)).toFixed(2)+'/'+(p.unit||'')+' · '+sxsGetCatName(p.catId)+' · 今日消耗 '+consume+(p.unit||'')+'</div></div>'
+      + '<div class="stock-status '+statusCls+'"><div class="ss-remain">'+fmt0(stock)+(p.unit||'')+'</div><div class="ss-predict">预计可用 '+predict+'</div></div>'
+      + '</div>';
+  }).join('');
+  box.innerHTML = h;
+}
+
+// ── 初始化 ──
+(function initChef(){
+  try{
+    renderBottomNav('chefdesk');
+    // 必须先注入消息中心全局样式（含 .sxs-od-* 订单卡片样式），否则待审核订单首屏会无样式、显示错乱
+    if(typeof injectNotifCenter==='function') injectNotifCenter();
+    if(typeof ensureNotifBell==='function') ensureNotifBell();
+    if(typeof updateNotifBell==='function') updateNotifBell();
+    renderChefOrders();
+  }catch(e){
+    console.error('chef init error', e);
+  }
+})();
+</script>
+</body>
+</html>
