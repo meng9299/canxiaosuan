@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>餐小算 · 套餐管理</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  /* ── 字体缩放变量 (小/中/大) ── */
+  --fs-9:9px; --fs-10:10px; --fs-11:11px; --fs-12:12px;
+  --fs-13:13px; --fs-14:14px; --fs-15:15px; --fs-16:16px;
+  --fs-18:18px; --fs-20:20px; --fs-22:22px; --fs-24:24px; --fs-26:26px;
+  --fs-28:28px; --fs-30:30px; --fs-36:36px;
+
+  --brand:#534AB7; --brand-light:#EEEDFE; --brand-mid:#7F77DD;
+  --bg:#f5f5f3; --white:#fff; --text:#1a1a1a; --text-s:#555; --text-m:#777;
+  --border:rgba(0,0,0,0.08); --radius:12px; --red:#e74c3c; --green:#27ae60; --orange:#f39c12;
+} body {font-weight:600;font-family:-apple-system,'PingFang SC','Helvetica Neue',sans-serif; background:var(--bg); color:var(--text); max-width:420px; margin:0 auto; padding-bottom:80px; }
+
+/* 顶栏 */
+.topbar { display:flex; align-items:center; padding:14px 16px 10px; background:var(--white); position:sticky; top:0; z-index:20; border-bottom:1px solid var(--border); gap:10px; }
+.topbar .back { font-size:var(--fs-20); color:var(--text); text-decoration:none; flex-shrink:0; }
+.topbar .title { font-size:var(--fs-16); font-weight:700; flex:1; }
+.role-tag { display:flex; align-items:center; gap:4px; font-size:var(--fs-14); font-weight:600; cursor:pointer; padding:4px 10px; border-radius:16px; border:1px solid var(--border); background:var(--bg); color:var(--text-s); white-space:nowrap; text-decoration:none; }
+.role-tag.boss { background:#fff3e0; color:#e65100; border-color:#ffe0b2; }
+
+/* 套餐列表 */
+.tc-list { padding:12px 16px; }
+.tc-card { background:var(--white); border-radius:var(--radius); margin-bottom:10px; overflow:hidden; }
+.tc-head { display:flex; align-items:center; padding:12px 14px; cursor:pointer; gap:10px; }
+.tc-head:active { background:#fafafa; }
+.tc-icon { font-size:var(--fs-28); flex-shrink:0; }
+.tc-info { flex:1; min-width:0; }
+.tc-name { font-size:var(--fs-15); font-weight:600; }
+.tc-meta { font-size:var(--fs-14); color:var(--text-m); margin-top:2px; }
+.tc-price { font-size:var(--fs-15); font-weight:700; color:var(--brand); flex-shrink:0; }
+.tc-arrow { font-size:var(--fs-14); color:var(--text-m); transition:transform .2s; }
+.tc-arrow.open { transform:rotate(180deg); }
+
+.tc-detail { display:none; padding:0 14px 12px; }
+.tc-detail.show { display:block; }
+.tc-comp { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid var(--border); font-size:var(--fs-15); }
+.tc-comp:last-child { border-bottom:none; }
+.tc-comp-name { flex:1; }
+.tc-comp-type { font-size:var(--fs-15); padding:2px 8px; border-radius:8px; margin-left:6px; }
+.tc-comp-type.must { background:#fff3e0; color:#e65100; }
+.tc-comp-type.optional { background:#e8f5e9; color:#2e7d32; }
+.tc-comp-cost { font-weight:600; color:var(--text-s); }
+
+.tc-summary { display:flex; justify-content:space-around; padding:10px 0 4px; border-top:1px solid var(--border); margin-top:6px; }
+.tc-sum-item { text-align:center; }
+.tc-sum-val { font-size:var(--fs-18); font-weight:700; }
+.tc-sum-val.cost { color:var(--orange); }
+.tc-sum-val.profit { color:var(--green); }
+.tc-sum-label { font-size:var(--fs-15); color:var(--text-m); margin-top:2px; }
+
+.tc-actions { display:flex; gap:8px; padding:8px 0 0; }
+.tc-action-btn { flex:1; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--white); font-size:var(--fs-15); cursor:pointer; font-family:inherit; text-align:center; }
+.tc-action-btn.edit { color:var(--brand); border-color:var(--brand); }
+.tc-action-btn.del { color:var(--red); border-color:var(--red); }
+
+/* 空状态 */
+.empty-state { text-align:center; padding:60px 20px; color:var(--text-m); }
+.empty-state .es-icon { font-size:48px; margin-bottom:12px; }
+.empty-state .es-text { font-size:var(--fs-14); margin-bottom:16px; }
+.empty-state .es-btn { background:var(--brand); color:#fff; border:none; border-radius:12px; padding:12px 24px; font-size:var(--fs-15); font-weight:600; cursor:pointer; font-family:inherit; }
+
+/* 新增按钮 */
+.add-btn { position:fixed; bottom:80px; right:50%; transform:translateX(200px); width:50px; height:50px; border-radius:50%; background:var(--brand); color:#fff; border:none; font-size:var(--fs-24); cursor:pointer; box-shadow:0 4px 14px rgba(83,74,183,.4); z-index:15; }
+
+/* 弹窗 */
+.overlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:100; display:none; align-items:flex-end; justify-content:center; }
+.overlay.show { display:flex; }
+.sheet { background:var(--white); border-radius:20px 20px 0 0; width:100%; max-width:420px; max-height:88vh; display:flex; flex-direction:column; }
+.sh-head { display:flex; align-items:center; justify-content:space-between; padding:16px 18px 12px; border-bottom:1px solid var(--border); }
+.sh-title { font-size:var(--fs-16); font-weight:700; }
+.sh-close { font-size:var(--fs-24); cursor:pointer; color:var(--text-m); padding:0 4px; }
+.sh-body { flex:1; overflow-y:auto; padding:16px 18px; }
+
+/* 表单 */
+.form-group { margin-bottom:14px; }
+.form-label { display:block; font-size:var(--fs-15); font-weight:600; color:var(--text-s); margin-bottom:6px; }
+.form-input { width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:10px; font-size:var(--fs-15); font-family:inherit; background:#fafafa; outline:none; }
+.form-input:focus { border-color:var(--brand); background:var(--white); }
+
+/* 组件选择 */
+.comp-section { margin-top:6px; }
+.comp-add-btn { width:100%; padding:10px; border:1.5px dashed var(--brand-mid); border-radius:10px; background:var(--brand-light); color:var(--brand); font-size:var(--fs-14); font-weight:600; cursor:pointer; font-family:inherit; margin-bottom:10px; }
+.comp-list { }
+.comp-row { display:flex; align-items:center; padding:10px 12px; background:#fafafa; border-radius:10px; margin-bottom:8px; gap:8px; }
+.comp-row .cr-icon { font-size:var(--fs-20); flex-shrink:0; }
+.comp-row .cr-info { flex:1; min-width:0; }
+.comp-row .cr-name { font-size:var(--fs-14); font-weight:600; }
+.comp-row .cr-cost { font-size:var(--fs-14); color:var(--text-m); }
+.comp-row .cr-type { display:flex; gap:4px; }
+.comp-row .cr-type-btn { font-size:var(--fs-15); padding:3px 8px; border-radius:6px; border:1px solid var(--border); background:var(--white); cursor:pointer; font-family:inherit; }
+.comp-row .cr-type-btn.active.must { background:#fff3e0; color:#e65100; border-color:#ffe0b2; }
+.comp-row .cr-type-btn.active.optional { background:#e8f5e9; color:#2e7d32; border-color:#c8e6c9; }
+.comp-row .cr-add { width:50px; }
+.comp-row .cr-add input { width:100%; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:var(--fs-14); text-align:center; font-family:inherit; }
+.comp-row .cr-del { color:var(--red); font-size:var(--fs-18); cursor:pointer; padding:4px; flex-shrink:0; }
+
+/* 配方选择弹窗 */
+.recipe-pick { }
+.recipe-pick-item { display:flex; align-items:center; padding:12px; border-bottom:1px solid var(--border); cursor:pointer; gap:10px; }
+.recipe-pick-item:active { background:#fafafa; }
+.recipe-pick-item .rp-icon { font-size:var(--fs-24); }
+.recipe-pick-item .rp-info { flex:1; }
+.recipe-pick-item .rp-name { font-size:var(--fs-14); font-weight:600; }
+.recipe-pick-item .rp-meta { font-size:var(--fs-14); color:var(--text-m); }
+.recipe-pick-item .rp-check { font-size:var(--fs-18); color:var(--brand); }
+
+.save-btn { width:100%; padding:14px; background:var(--brand); color:#fff; border:none; border-radius:12px; font-size:var(--fs-15); font-weight:600; cursor:pointer; font-family:inherit; margin-top:10px; }
+
+/* 底部导航 */
+.bottom-nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:420px; background:var(--white); border-top:1px solid var(--border); display:flex; padding-bottom:env(safe-area-inset-bottom,4px); z-index:50; }
+.nav-item {font-weight:600; flex:1; text-align:center; padding:8px 0 6px; font-size:var(--fs-15); color:var(--text-m); cursor:pointer; text-decoration:none; }
+.nav-item.active { color:var(--brand); }
+.nav-item .n-icon { font-size:var(--fs-20); display:block; margin-bottom:2px; }
+
+/* Toast */
+.toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:var(--green); color:#fff; padding:10px 24px; border-radius:20px; font-size:var(--fs-15); z-index:200; opacity:0; transition:opacity .3s; }
+.toast.show { opacity:1; }
+</style>
+
+<script>
+/* ═══ 字体缩放 小/中/大 ═══ */
+(function(){
+  var KEY = 'sxs_font_size';
+  var cur = localStorage.getItem(KEY) || 'small';
+  document.documentElement.setAttribute('data-font-size', cur);
+  window.getFontSize = function(){ return localStorage.getItem(KEY)||'small'; };
+  window.setFontSize = function(lv){
+    if(['small','medium','large'].indexOf(lv)<0) return;
+    localStorage.setItem(KEY, lv);
+    document.documentElement.setAttribute('data-font-size', lv);
+    window.dispatchEvent(new Event('resize'));
+  };
+})();
+</script>
+
+</head>
+<body>
+
+<div class="topbar">
+  <a href="catering.html" class="back">←</a>
+  <span class="title">🍱 套餐管理</span>
+  <a class="role-tag boss" id="roleTag" href="shezhi.html">👔 老板</a>
+</div>
+
+<div id="taocanList" class="tc-list"></div>
+
+<button class="add-btn" onclick="openModal()">＋</button>
+
+<!-- 套餐编辑弹窗 -->
+<div class="overlay" id="tcModal">
+  <div class="sheet">
+    <div class="sh-head">
+      <span class="sh-title" id="modalTitle">新建套餐</span>
+      <span class="sh-close" onclick="closeModal()">×</span>
+    </div>
+    <div class="sh-body">
+      <div class="form-group">
+        <label class="form-label">套餐图标</label>
+        <input type="text" class="form-input" id="tcIcon" value="🍱" style=""width:60px;text-align:center;font-size:var(--fs-24);cursor:pointer;"" readonly onclick="showIconPicker('tcIcon')" title="点击选择图标">
+      </div>
+      <div class="form-group">
+        <label class="form-label">套餐名称 *</label>
+        <input type="text" class="form-input" id="tcName" placeholder="如：豪华午餐套餐">
+      </div>
+      <div class="form-group">
+        <label class="form-label">套餐售价（元）*</label>
+        <input type="number" class="form-input" id="tcPrice" placeholder="如：25">
+      </div>
+      <div class="form-group">
+        <label class="form-label">套餐分类</label>
+        <input type="text" class="form-input" id="tcCategory" placeholder="如：午餐套餐、商务套餐">
+      </div>
+
+      <div class="comp-section">
+        <label class="form-label">套餐组件（从已有配方中选择）</label>
+        <button class="comp-add-btn" onclick="openRecipePick()">＋ 添加组件</button>
+        <div class="comp-list" id="compList"></div>
+      </div>
+
+      <div id="tcCostPreview" style="display:none;background:#fafafa;border-radius:10px;padding:12px;margin-top:10px;">
+        <div style=""display:flex;justify-content:space-between;font-size:var(--fs-15);margin-bottom:4px;"">
+          <span>食材成本合计</span><span id="cpCost" style="font-weight:600;color:var(--orange);">¥0</span>
+        </div>
+        <div style=""display:flex;justify-content:space-between;font-size:var(--fs-15);margin-bottom:4px;"">
+          <span>调料成本</span><span id="cpSeason" style="font-weight:600;color:var(--orange);">¥0</span>
+        </div>
+        <div style=""display:flex;justify-content:space-between;font-size:var(--fs-15);font-weight:700;padding-top:8px;border-top:1px solid var(--border);"">
+          <span>套餐利润</span><span id="cpProfit" style="color:var(--green);">¥0</span>
+        </div>
+      </div>
+
+      <button class="save-btn" onclick="saveTaocan()">✅ 保存套餐</button>
+    </div>
+  </div>
+</div>
+
+<!-- 配方选择弹窗 -->
+<div class="overlay" id="recipePickModal">
+  <div class="sheet">
+    <div class="sh-head">
+      <span class="sh-title">选择菜品（配方）</span>
+      <span class="sh-close" onclick="closeRecipePick()">×</span>
+    </div>
+    <div class="sh-body" id="recipePickBody"></div>
+  </div>
+</div>
+
+<div class="bottom-nav" id="bottomNav"></div>
+<div class="toast" id="toast"></div>
+
+<script src="gongxiang.js"></script>
+<script>
+// ── 数据 ──
+function getTaocans(){ return loadJSON('sxs_taocans'); }
+function saveTaocans(v){ saveJSON('sxs_taocans', v); }
+function getRecipes(){ return loadJSON('sxs_recipes'); }
+function getProds(){ return loadJSON('sp_prods'); }
+
+// ── 成本计算（复用peifang逻辑）──
+function ingUnitPrice(prodId){
+  var prods=getProds();
+  var p=prods.find(function(x){return x.id===prodId;});
+  if(!p) return 0;
+  var lp=p.lastPrice||0;
+  if(p.unit==='斤') return lp/500;
+  if(p.unit==='瓶') return lp/500;
+  if(p.unit==='袋') return lp/500;
+  return lp;
+}
+function calcRecipeCost(recipe){
+  var ingCost=0;
+  recipe.ingredients.forEach(function(ing){ ingCost+=ingUnitPrice(ing.prodId)*ing.amount; });
+  var seasonCost=recipe.price*(recipe.seasonCoef||2)/100;
+  return { ing:ingCost, season:seasonCost, total:ingCost+seasonCost };
+}
+function calcTaocanCost(taocan){
+  var recipes=getRecipes();
+  var totalIng=0, totalSeason=0;
+  taocan.components.forEach(function(c){
+    var r=recipes.find(function(x){return x.id===c.recipeId;});
+    if(r){
+      var cost=calcRecipeCost(r);
+      totalIng+=cost.ing;
+      totalSeason+=cost.season;
+    }
+  });
+  return { ing:totalIng, season:totalSeason, total:totalIng+totalSeason };
+}
+
+// ── 渲染套餐列表 ──
+function renderList(){
+  var list=getTaocans();
+  var el=document.getElementById('taocanList');
+  if(!list.length){
+    el.innerHTML='<div class="empty-state"><div class="es-icon">🍱</div><div class="es-text">还没有套餐<br>点击右下角＋创建第一个套餐</div><button class="es-btn" onclick="openModal()">新建套餐</button></div>';
+    return;
+  }
+  var recipes=getRecipes();
+  el.innerHTML=list.map(function(t,idx){
+    var cost=calcTaocanCost(t);
+    var profit=t.price-cost.total;
+    var margin=t.price>0?(profit/t.price*100):0;
+    var did='tcd_'+idx;
+    var compHtml=t.components.map(function(c){
+      var r=recipes.find(function(x){return x.id===c.recipeId;});
+      var rcost=r?calcRecipeCost(r):{total:0};
+      var addStr=c.addPrice>0?' +¥'+c.addPrice:'';
+      return '<div class="tc-comp">'+
+        '<span class="tc-comp-name">'+(r?(r.icon||'🍳'):'📦')+' '+(r?r.name:'已删除')+'</span>'+
+        '<span class="tc-comp-type '+c.type+'">'+(c.type==='must'?'必选':'可选')+addStr+'</span>'+
+        '<span class="tc-comp-cost">¥'+rcost.total.toFixed(1)+'</span>'+
+      '</div>';
+    }).join('');
+    return '<div class="tc-card">'+
+      '<div class="tc-head" onclick="toggleTaocan('+idx+',this)">'+
+        '<span class="tc-icon">'+(t.icon||'🍱')+'</span>'+
+        '<div class="tc-info">'+
+          '<div class="tc-name">'+escapeHtml(t.name)+'</div>'+
+          '<div class="tc-meta">'+t.components.length+'个组件 · 毛利'+(margin>=0?margin.toFixed(0):'?')+'%</div>'+
+        '</div>'+
+        '<span class="tc-price">¥'+t.price+'</span>'+
+        '<span class="tc-arrow">▼</span>'+
+      '</div>'+
+      '<div class="tc-detail" id="'+did+'">'+
+        compHtml+
+        '<div class="tc-summary">'+
+          '<div class="tc-sum-item"><div class="tc-sum-val cost">¥'+cost.total.toFixed(1)+'</div><div class="tc-sum-label">成本</div></div>'+
+          '<div class="tc-sum-item"><div class="tc-sum-val profit">¥'+profit.toFixed(1)+'</div><div class="tc-sum-label">利润</div></div>'+
+        '</div>'+
+        '<div class="tc-actions">'+
+          '<button class="tc-action-btn edit" onclick="event.stopPropagation();openModal('+idx+')">✏️ 编辑</button>'+
+          '<button class="tc-action-btn del" onclick="event.stopPropagation();delTaocan('+idx+')">🗑 删除</button>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function toggleTaocan(idx, headEl){
+  var d=document.getElementById('tcd_'+idx); if(!d)return;
+  d.classList.toggle('show');
+  var ar=headEl.querySelector('.tc-arrow'); if(ar)ar.classList.toggle('open');
+}
+
+// ── 编辑/新建 ──
+var editingIdx=null;
+var editComponents=[]; // [{recipeId, type:'must'/'optional', addPrice:0}]
+
+function openModal(idx){
+  editingIdx=(idx!==undefined)?idx:null;
+  editComponents=[];
+  var recipes=getRecipes();
+  if(editingIdx!==null){
+    var list=getTaocans();
+    var t=list[editingIdx];
+    if(t){
+      document.getElementById('modalTitle').textContent='编辑套餐';
+      document.getElementById('tcIcon').value=t.icon||'🍱';
+      document.getElementById('tcName').value=t.name;
+      document.getElementById('tcPrice').value=t.price;
+      document.getElementById('tcCategory').value=t.category||'';
+      editComponents=JSON.parse(JSON.stringify(t.components));
+    }
+  } else {
+    document.getElementById('modalTitle').textContent='新建套餐';
+    document.getElementById('tcIcon').value='🍱';
+    document.getElementById('tcName').value='';
+    document.getElementById('tcPrice').value='';
+    document.getElementById('tcCategory').value='';
+  }
+  renderComponents();
+  document.getElementById('tcModal').classList.add('show');
+}
+
+function closeModal(){
+  document.getElementById('tcModal').classList.remove('show');
+  editingIdx=null;
+  editComponents=[];
+}
+
+function renderComponents(){
+  var recipes=getRecipes();
+  var el=document.getElementById('compList');
+  if(!editComponents.length){
+    el.innerHTML='<div style="text-align:center;padding:16px;color:var(--text-m);font-size:var(--fs-15);">暂无组件，点击上方添加</div>';
+    updateCostPreview();
+    return;
+  }
+  el.innerHTML=editComponents.map(function(c,i){
+    var r=recipes.find(function(x){return x.id===c.recipeId;});
+    var cost=r?calcRecipeCost(r):{total:0};
+    return '<div class="comp-row">'+
+      '<span class="cr-icon">'+(r?(r.icon||'🍳'):'📦')+'</span>'+
+      '<div class="cr-info">'+
+        '<div class="cr-name">'+(r?r.name:'已删除')+'</div>'+
+        '<div class="cr-cost">成本 ¥'+cost.total.toFixed(1)+'</div>'+
+      '</div>'+
+      '<div class="cr-type">'+
+        '<button class="cr-type-btn '+(c.type==='must'?'active must':'')+'" onclick="setCompType('+i+',\'must\')">必选</button>'+
+        '<button class="cr-type-btn '+(c.type==='optional'?'active optional':'')+'" onclick="setCompType('+i+',\'optional\')">可选</button>'+
+      '</div>'+
+      '<div class="cr-add"><input type="number" placeholder="加价" value="'+(c.addPrice||'')+'" onchange="setAddPrice('+i+',this.value)" title="可选组件加价"></div>'+
+      '<span class="cr-del" onclick="delComp('+i+')">🗑</span>'+
+    '</div>';
+  }).join('');
+  updateCostPreview();
+}
+
+function setCompType(i,type){
+  editComponents[i].type=type;
+  renderComponents();
+}
+function setAddPrice(i,val){
+  editComponents[i].addPrice=parseFloat(val)||0;
+}
+function delComp(i){
+  editComponents.splice(i,1);
+  renderComponents();
+}
+
+function updateCostPreview(){
+  var recipes=getRecipes();
+  var totalIng=0,totalSeason=0;
+  editComponents.forEach(function(c){
+    var r=recipes.find(function(x){return x.id===c.recipeId;});
+    if(r){
+      var cost=calcRecipeCost(r);
+      totalIng+=cost.ing;
+      totalSeason+=cost.season;
+    }
+  });
+  var total=totalIng+totalSeason;
+  var price=parseFloat(document.getElementById('tcPrice').value)||0;
+  var profit=price-total;
+  document.getElementById('tcCostPreview').style.display=editComponents.length?'block':'none';
+  document.getElementById('cpCost').textContent='¥'+totalIng.toFixed(1);
+  document.getElementById('cpSeason').textContent='¥'+totalSeason.toFixed(1);
+  document.getElementById('cpProfit').textContent='¥'+profit.toFixed(1);
+}
+
+// 监听价格输入实时更新
+document.getElementById('tcPrice').addEventListener('input',updateCostPreview);
+
+// ── 配方选择 ──
+function openRecipePick(){
+  document.getElementById('recipePickModal').classList.add('show');
+  renderRecipePick();
+}
+function closeRecipePick(){
+  document.getElementById('recipePickModal').classList.remove('show');
+}
+function renderRecipePick(filter){
+  var recipes=getRecipes();
+  filter=filter||'';
+  var f=filter.toLowerCase();
+  var list=recipes.filter(function(r){ return !f||r.name.toLowerCase().indexOf(f)>=0; });
+  var el=document.getElementById('recipePickBody');
+  if(!recipes.length){
+    el.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text-m);font-size:var(--fs-14);">暂无配方<br>请先去「成本计算」创建菜品配方</div>';
+    return;
+  }
+  var h='';
+  if(filter!==undefined){
+    h+='<input type="text" class="form-input" placeholder="搜索菜品名..." style="margin-bottom:12px;" oninput="renderRecipePick(this.value)">';
+  } else {
+    h+='<input type="text" class="form-input" placeholder="搜索菜品名..." style="margin-bottom:12px;" oninput="renderRecipePick(this.value)">';
+  }
+  if(!list.length){
+    h+='<div style="text-align:center;padding:20px;color:var(--text-m);font-size:var(--fs-15);">没有匹配的菜品</div>';
+  } else {
+    list.forEach(function(r){
+      var cost=calcRecipeCost(r);
+      var already=editComponents.find(function(c){return c.recipeId===r.id;});
+      h+='<div class="recipe-pick-item" onclick="pickRecipe(\''+r.id+'\')">'+
+        '<span class="rp-icon">'+(r.icon||'🍳')+'</span>'+
+        '<div class="rp-info">'+
+          '<div class="rp-name">'+r.name+'</div>'+
+          '<div class="rp-meta">售价¥'+r.price+' · 成本¥'+cost.total.toFixed(1)+'</div>'+
+        '</div>'+
+        (already?'<span class="rp-check">✓</span>':'<span style="color:var(--text-m);font-size:var(--fs-18);">＋</span>')+
+      '</div>';
+    });
+  }
+  el.innerHTML=h;
+}
+function pickRecipe(id){
+  var already=editComponents.find(function(c){return c.recipeId===id;});
+  if(already){ toast('该菜品已在组件中'); return; }
+  editComponents.push({ recipeId:id, type:'must', addPrice:0 });
+  renderComponents();
+  closeRecipePick();
+  toast('已添加组件');
+}
+
+// ── 保存 ──
+function saveTaocan(){
+  var name=document.getElementById('tcName').value.trim();
+  var price=parseFloat(document.getElementById('tcPrice').value);
+  var icon=document.getElementById('tcIcon').value.trim()||'🍱';
+  var category=document.getElementById('tcCategory').value.trim()||'套餐';
+  if(!name){ toast('请填写套餐名称',false); return; }
+  if(!price||price<=0){ toast('请填写套餐售价',false); return; }
+  if(!editComponents.length){ toast('请至少添加一个组件',false); return; }
+
+  var taocan={ id:'tc_'+Date.now(), name:name, price:price, icon:icon, category:category, components:editComponents };
+  var list=getTaocans();
+  if(editingIdx!==null){
+    taocan.id=list[editingIdx].id;
+    list[editingIdx]=taocan;
+  } else {
+    list.push(taocan);
+  }
+  saveTaocans(list);
+  closeModal();
+  renderList();
+  toast('套餐「'+name+'」已保存');
+}
+
+function delTaocan(idx){
+  var list=getTaocans();
+  if(!confirm('确认删除套餐「'+list[idx].name+'」？')) return;
+  list.splice(idx,1);
+  saveTaocans(list);
+  renderList();
+  toast('套餐已删除');
+}
+
+// ── HTML转义 ──
+function escapeHtml(s){ if(!s)return'';return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── 初始化 ──
+renderList();
+renderBottomNav('baobiao');
+</script>
+</body>
+</html>
