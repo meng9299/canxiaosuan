@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>餐小算 · 重置本地数据</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; background:#f3f2ef; min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px 20px; }
+.box { background:#fff; border-radius:16px; padding:28px 22px; max-width:360px; width:100%; text-align:center; }
+h2 { font-size:18px; color:#1a1a1a; margin-bottom:12px; }
+p { font-size:13px; color:#777; line-height:1.6; margin-bottom:20px; }
+.btn { width:100%; padding:14px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn-reset { background:#e74c3c; color:#fff; }
+.btn-cancel { background:#eee; color:#555; margin-top:10px; }
+</style>
+</head>
+<body>
+<div class="box">
+  <h2>⚠️ 清空本地测试数据</h2>
+  <p>这会清除本手机、本网址下保存的店铺、账号、密码、采购单等<b>全部测试数据</b>，然后回到初始化建店页面。<br>测试数据上线前本就会清空，无妨。确认要清空吗？</p>
+  <button class="btn btn-reset" onclick="doReset()">确认清空并重新建店</button>
+  <button class="btn btn-cancel" onclick="location.href='index.html'">返回，不清空</button>
+</div>
+<script>
+function doReset(){
+  try{ localStorage.clear(); }catch(e){}
+  alert('已清空，正在返回首页');
+  location.href='index.html';
+}
+</script>
+</body>
+</html>
